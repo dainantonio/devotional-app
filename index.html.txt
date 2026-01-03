@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Grace | Sanctuary</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Lato:ital,wght@0,300;0,400;0,700;1,400&family=WindSong&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- VARIABLES --- */
+        :root {
+            --text-light: #F7FAFC;
+            --text-dim: #A0AEC0;
+            --accent: #D4AF37; /* Metallic Gold */
+            --glass-bg: rgba(23, 25, 35, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --font-display: 'Cinzel', serif;
+            --font-body: 'Lato', sans-serif;
+            --font-script: 'WindSong', cursive;
+            
+            /* Dynamic Atmosphere Defaults (Deep Blue) */
+            --atm-1: #0f1216;
+            --atm-2: #1a202c;
+            --atm-3: #151921;
+        }
+
+        /* --- GLOBAL RESET & LAYOUT --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background: var(--atm-1);
+            color: var(--text-light);
+            font-family: var(--font-body);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            transition: background 1.5s ease; /* Smooth atmosphere transition */
+        }
+
+        /* --- SABBATH MODE --- */
+        body.sabbath-mode .interaction-layer,
+        body.sabbath-mode .date-badge,
+        body.sabbath-mode .scripture-ref,
+        body.sabbath-mode .sidebar-btn,
+        body.sabbath-mode .journal-toggle {
+            display: none !important;
+        }
+        
+        body.sabbath-mode .content-card {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            backdrop-filter: none;
+        }
+        
+        body.sabbath-mode .scripture-text {
+            font-size: 1.8rem;
+            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        /* --- ANIMATED BACKGROUND --- */
+        .ambient-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -10;
+            background: linear-gradient(135deg, var(--atm-1) 0%, var(--atm-2) 50%, var(--atm-3) 100%);
+            background-size: 200% 200%;
+            transition: background 1.5s ease; /* Critical for the shift effect */
+            animation: gradientShift 20s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Particles */
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            z-index: -9;
+            pointer-events: none;
+            animation: floatUp linear infinite;
+        }
+
+        @keyframes floatUp {
+            from { transform: translateY(110vh) scale(0.5); opacity: 0; }
+            30% { opacity: 0.4; }
+            to { transform: translateY(-10vh) scale(1); opacity: 0; }
+        }
+
+        /* --- UI LAYERS --- */
+        
+        /* 1. THE GATE (Intro) */
+        #gate-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 100;
+            background: #0f1216;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1.5s ease, visibility 1.5s;
+        }
+        
+        #gate-layer.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+        .gate-question {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            margin-bottom: 40px;
+            opacity: 0;
+            animation: fadeIn 2s ease forwards;
+        }
+
+        .mood-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            opacity: 0;
+            animation: fadeIn 2s ease 1s forwards;
+        }
+
+        .mood-btn {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            padding: 15px 30px;
+            font-family: var(--font-body);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            border-radius: 2px;
+        }
+        .mood-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(212, 175, 55, 0.05); }
+
+        /* 2. MAIN FEED */
+        .snap-container {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        .slide {
+            height: 100vh;
+            width: 100%;
+            scroll-snap-align: start;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding: 20px;
+        }
+
+        .content-card {
+            width: 100%;
+            max-width: 500px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 40px 30px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            /* Hide scrollbar within card */
+            scrollbar-width: none; 
+        }
+        .content-card::-webkit-scrollbar { display: none; }
+        /* Allow card internal scroll if content is long */
+        .content-card { overflow-y: auto; } 
+
+        .slide.active .content-card { opacity: 1; transform: translateY(0); }
+
+        /* Scripture Styles */
+        .scripture-container {
+            margin: 20px 0;
+            position: relative;
+            cursor: pointer;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .scripture-text {
+            font-size: 1.35rem;
+            font-family: var(--font-display);
+            line-height: 1.6;
+            color: #fff;
+            transition: text-shadow 0.3s ease;
+        }
+
+        .breathe-active .scripture-text { animation: breathe 8s ease-in-out infinite; }
+
+        @keyframes breathe {
+            0%, 100% { opacity: 0.85; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); text-shadow: 0 0 20px rgba(255,255,255,0.1); }
+        }
+
+        .scripture-text.held {
+            color: var(--accent);
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+            border-left: 2px solid var(--accent);
+            padding-left: 15px;
+        }
+
+        .hold-hint {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            opacity: 0;
+            transition: opacity 0.3s;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        .scripture-container:hover .hold-hint { opacity: 0.6; }
+
+        .scripture-ref {
+            font-size: 0.8rem;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+
+        /* --- INTERACTION LAYERS --- */
+        .interaction-layer {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Reflection & Prayer Boxes */
+        .reflection-box, .prayer-box, .journal-box {
+            text-align: left;
+            font-size: 1rem;
+            color: #E2E8F0;
+            line-height: 1.7;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 20px;
+            margin-bottom: 20px;
+            display: none;
+            width: 100%;
+            animation: fadeIn 0.8s forwards;
+        }
+
+        .prayer-line {
+            font-family: var(--font-body);
+            font-size: 1rem;
+            color: #E2E8F0;
+            margin-bottom: 12px;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeUpLine 1s forwards;
+            line-height: 1.6;
+        }
+
+        /* Action Buttons */
+        .action-btn {
+            background: none;
+            border: 1px solid var(--text-dim);
+            color: var(--text-dim);
+            padding: 10px 24px;
+            border-radius: 50px;
+            margin: 10px 0;
+            cursor: pointer;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+        .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .action-btn.secondary { font-size: 0.75rem; border: none; opacity: 0.7; }
+
+        /* Journaling Specifics */
+        .journal-box textarea {
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--glass-border);
+            color: var(--text-light);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: var(--font-body);
+            margin-bottom: 10px;
+            resize: vertical;
+            min-height: 100px;
+        }
+        .journal-box textarea:focus { outline: none; border-color: var(--accent); }
+        .journal-prompt {
+            font-family: var(--font-display);
+            color: var(--accent);
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        /* Amen Ripple Effect */
+        .amen-btn-container { position: relative; display: inline-block; }
+        .ripple {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--accent);
+            animation: rippleEffect 1s linear forwards;
+            opacity: 0;
+        }
+        @keyframes rippleEffect {
+            0% { width: 0; height: 0; opacity: 0.8; }
+            100% { width: 100px; height: 100px; opacity: 0; }
+        }
+
+        /* --- SIDEBAR --- */
+        .top-bar {
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 50;
+            pointer-events: none;
+        }
+        .top-btn {
+            pointer-events: auto;
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .top-btn:hover, .top-btn.active { color: var(--accent); }
+        .top-btn svg { width: 24px; height: 24px; fill: currentColor; }
+
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0; height: 100%;
+            width: 300px;
+            background: #111;
+            z-index: 60;
+            transform: translateX(-100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 80px 30px 30px 30px;
+            border-right: 1px solid var(--glass-border);
+            overflow-y: auto;
+        }
+        .sidebar.open { transform: translateX(0); }
+        
+        .overlay-mask {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 55;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.3s;
+        }
+        .overlay-mask.active { opacity: 1; visibility: visible; }
+
+        /* --- SILENCE TIMER --- */
+        #silence-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f1216;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 1s ease;
+        }
+        #silence-overlay.active { opacity: 1; visibility: visible; }
+
+        .breathing-circle {
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            border: 1px solid var(--text-dim);
+            animation: breathe-circle 6s ease-in-out infinite;
+            margin-bottom: 30px;
+        }
+        @keyframes breathe-circle {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.5); opacity: 0.8; border-color: var(--accent); }
+        }
+
+        /* --- UTILS --- */
+        .toggle-switch {
+            width: 40px; height: 20px;
+            background: #333;
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: 0.3s;
+        }
+        .toggle-switch.active { background: var(--accent); }
+        .toggle-switch.active::after { transform: translateX(20px); }
+        
+        .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.9rem; color: var(--text-dim); }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeUpLine { to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body>
+
+    <!-- AUDIO ENGINE -->
+    <audio id="ambience-audio" loop></audio>
+
+    <!-- BACKGROUND -->
+    <div class="ambient-bg" id="bg-layer"></div>
+
+    <!-- UI LAYER: HEADER -->
+    <div class="top-bar">
+        <button class="top-btn sidebar-btn" onclick="toggleSidebar()" aria-label="Menu">
+            <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+        </button>
+        <button class="top-btn" id="audio-btn" onclick="toggleAudio()" aria-label="Ambience">
+            <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+        </button>
+    </div>
+
+    <!-- UI LAYER: SIDEBAR -->
+    <div class="overlay-mask" id="overlay" onclick="toggleSidebar()"></div>
+    <aside class="sidebar" id="sidebar">
+        <h2 style="font-family:var(--font-display); color:var(--accent); margin-bottom:20px;">Sanctuary</h2>
+        <div style="font-size:0.8rem; color:#666; margin-bottom:30px;">Daily Grace v7.0</div>
+
+        <div style="margin-bottom:10px; font-weight:bold; color:#ddd;">Words I'm Holding</div>
+        <div id="held-list" style="margin-bottom:30px;">
+            <p style="font-size: 0.8rem; color: #555;">Double-tap verses to hold...</p>
+        </div>
+
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--glass-border);">
+            <div class="setting-item">
+                <span>Breath Sync</span>
+                <div class="toggle-switch active" id="breath-toggle" onclick="toggleBreath()"></div>
+            </div>
+            <div class="setting-item">
+                <span>Sabbath Mode<br><small style="font-size:0.7em; opacity:0.6;">(Scripture Only)</small></span>
+                <div class="toggle-switch" id="sabbath-toggle" onclick="toggleSabbath()"></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- UI LAYER: SILENCE TIMER -->
+    <div id="silence-overlay">
+        <div class="breathing-circle"></div>
+        <div style="font-family:var(--font-display); font-size:1.2rem; margin-bottom:10px;">Be Still</div>
+        <div id="timer-display" style="font-family:var(--font-body); color:var(--text-dim);">01:00</div>
+        <button class="action-btn secondary" onclick="stopSilence()" style="margin-top:30px;">Return</button>
+    </div>
+
+    <!-- UI LAYER: GATE (Intro) -->
+    <section id="gate-layer">
+        <div class="gate-content">
+            <h1 class="gate-question">How is your heart today?</h1>
+            <div class="mood-grid">
+                <button class="mood-btn" onclick="enterApp('Weary')">Weary</button>
+                <button class="mood-btn" onclick="enterApp('Grateful')">Grateful</button>
+                <button class="mood-btn" onclick="enterApp('Anxious')">Anxious</button>
+                <button class="mood-btn" onclick="enterApp('Hopeful')">Hopeful</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- UI LAYER: MAIN FEED -->
+    <main class="snap-container" id="feed">
+        <!-- Slides Injected Here -->
+    </main>
+
+    <script>
+        // ============================
+        //  DATA
+        // ============================
+        const DEVOTIONALS = [
+            {
+                id: 1,
+                tags: ['Anxious', 'Weary'],
+                colors: ['#0f1216', '#2d3748', '#1a202c'], // Cool deep blues
+                date: "Today",
+                title: "Be Still",
+                scripture: "He says, 'Be still, and know that I am God; I will be exalted among the nations, I will be exalted in the earth.'",
+                ref: "Psalm 46:10",
+                reflection: "Stillness is not merely the absence of noise; it is the presence of focus. In the rush of this digital age, we fear silence because in silence, we must face ourselves. But God invites you into the quiet.",
+                prompt: "What is the loudest 'noise' in your mind right now?",
+                prayerLines: ["Lord, the noise is loud.", "Teach my heart stillness.", "I let go of control.", "I trust You are God."]
+            },
+            {
+                id: 2,
+                tags: ['Weary', 'Hopeful'],
+                colors: ['#1C1917', '#44403C', '#292524'], // Warm Stone/Sepia
+                date: "Yesterday",
+                title: "Come to Me",
+                scripture: "Come to me, all you who are weary and burdened, and I will give you rest. Take my yoke upon you and learn from me.",
+                ref: "Matthew 11:28",
+                reflection: "The Shepherd's promise is not just provision, but presence. He doesn't just send you to the water; He leads you there. Walk with Him today.",
+                prompt: "What heavy burden can you physically visualize handing to Jesus?",
+                prayerLines: ["Jesus, I am tired.", "I trade my yoke for grace.", "Teach me to rest.", "Thank You for carrying this."]
+            },
+            {
+                id: 3,
+                tags: ['Grateful', 'Hopeful'],
+                colors: ['#1e1b4b', '#312e81', '#4338ca'], // Indigo/Sunrise
+                date: "Jan 1",
+                title: "New Mercies",
+                scripture: "Because of the Lord’s great love we are not consumed, for his compassions never fail. They are new every morning.",
+                ref: "Lamentations 3:22",
+                reflection: "Yesterday's failures do not define today's potential. As the sun rose this morning, so did a fresh batch of God's mercy.",
+                prompt: "Name one specific mercy you experienced yesterday.",
+                prayerLines: ["Father, thank You.", "I don't run on past grace.", "I receive fresh mercy.", "Great is Your faithfulness."]
+            },
+            {
+                id: 4,
+                tags: ['Anxious'],
+                colors: ['#111827', '#1F2937', '#374151'], // Deep Gray/Slate
+                date: "Wisdom",
+                title: "Peace I Leave",
+                scripture: "Peace I leave with you; my peace I give you. I do not give to you as the world gives. Do not let your hearts be troubled.",
+                ref: "John 14:27",
+                reflection: "This peace is not a feeling; it is a person. It is a guard standing watch over the door of your heart.",
+                prompt: "Where do you feel 'trouble' in your body? Breathe peace into that spot.",
+                prayerLines: ["Prince of Peace,", "Quiet the storm.", "I accept Your gift.", "Guard my heart."]
+            }
+        ];
+
+        // ============================
+        //  STATE
+        // ============================
+        const state = {
+            mood: null,
+            heldWords: JSON.parse(localStorage.getItem('dailyGrace_held')) || [],
+            savedNotes: JSON.parse(localStorage.getItem('dailyGrace_notes')) || {},
+            audioContext: null,
+            isAudioPlaying: false,
+            breathEnabled: true,
+            silenceInterval: null
+        };
+
+        // ============================
+        //  INIT & LOGIC
+        // ============================
+        document.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+            renderHeldWords();
+        });
+
+        function enterApp(selectedMood) {
+            state.mood = selectedMood;
+            
+            // Sort Data
+            DEVOTIONALS.sort((a, b) => {
+                const aMatch = a.tags.includes(selectedMood);
+                const bMatch = b.tags.includes(selectedMood);
+                return bMatch - aMatch; 
+            });
+
+            // Render
+            renderFeed();
+
+            // Animate Gate
+            const gate = document.getElementById('gate-layer');
+            gate.style.opacity = '0';
+            setTimeout(() => {
+                gate.classList.add('hidden');
+                setupObserver(); 
+            }, 1500);
+        }
+
+        function renderFeed() {
+            const container = document.getElementById('feed');
+            container.innerHTML = '';
+
+            DEVOTIONALS.forEach(data => {
+                const isHeld = state.heldWords.find(w => w.id === data.id);
+                const existingNote = state.savedNotes[data.id] || "";
+                
+                const slide = document.createElement('section');
+                slide.className = 'slide';
+                slide.dataset.colors = JSON.stringify(data.colors); // Store colors for observer
+                
+                slide.innerHTML = `
+                    <div class="content-card">
+                        <span class="date-badge" style="color:var(--accent); font-size:0.75rem; letter-spacing:2px; margin-bottom:10px;">${data.date}</span>
+                        <h1 style="font-family:var(--font-display); font-size:2rem; margin-bottom:20px;">${data.title}</h1>
+                        
+                        <div class="scripture-container ${state.breathEnabled ? 'breathe-active' : ''}" ondblclick="toggleHold(${data.id}, this)">
+                            <p class="scripture-text ${isHeld ? 'held' : ''}">${data.scripture}</p>
+                            <div class="hold-hint">Double-tap to hold</div>
+                        </div>
+                        <span class="scripture-ref">${data.ref}</span>
+
+                        <!-- INTERACTION LAYERS -->
+                        <div class="interaction-layer">
+                            
+                            <!-- 1. Reflection -->
+                            <button class="action-btn" id="btn-ref-${data.id}" onclick="revealReflection(${data.id})">
+                                Read Reflection
+                            </button>
+                            <div class="reflection-box" id="ref-${data.id}">
+                                <p>${data.reflection}</p>
+                                
+                                <!-- 2. Journaling (Heart Notes) -->
+                                <button class="action-btn journal-toggle" onclick="revealJournal(this, ${data.id})" style="margin-top:20px; width:100%;">
+                                    Open Heart Notes ${existingNote ? '✎' : ''}
+                                </button>
+                            </div>
+
+                            <!-- Journal Content -->
+                            <div class="journal-box" id="journal-${data.id}">
+                                <div class="journal-prompt">${data.prompt}</div>
+                                <textarea id="note-${data.id}" placeholder="Type your heart here...">${existingNote}</textarea>
+                                <div style="display:flex; gap:10px;">
+                                    <button class="action-btn secondary" onclick="saveJournal(${data.id})">Save Note</button>
+                                    <button class="action-btn" onclick="revealPrayer(this, ${data.id}, true)" style="flex:1;">
+                                        Kneel to Pray
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 3. Prayer Content -->
+                            <div class="prayer-box" id="prayer-${data.id}">
+                                <!-- Lines injected here -->
+                                <div class="amen-btn-container" style="width:100%; margin-top:20px; display:flex; justify-content:center;">
+                                    <button class="action-btn" onclick="triggerEcho(this)">Amen</button>
+                                </div>
+                                <button class="action-btn secondary" onclick="startSilence()" style="margin-top:15px; width:100%;">
+                                    Sit in Silence
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(slide);
+            });
+        }
+
+        // --- INTERACTION LOGIC ---
+        function revealReflection(id) {
+            document.getElementById(`btn-ref-${id}`).style.display = 'none';
+            document.getElementById(`ref-${id}`).style.display = 'block';
+        }
+
+        function revealJournal(btn, id) {
+            btn.style.display = 'none';
+            document.getElementById(`journal-${id}`).style.display = 'block';
+        }
+
+        function saveJournal(id) {
+            const text = document.getElementById(`note-${id}`).value;
+            state.savedNotes[id] = text;
+            localStorage.setItem('dailyGrace_notes', JSON.stringify(state.savedNotes));
+            
+            // Visual feedback
+            const btn = document.querySelector(`#journal-${id} .secondary`);
+            const originalText = btn.textContent;
+            btn.textContent = "Saved";
+            setTimeout(() => btn.textContent = originalText, 2000);
+        }
+
+        function revealPrayer(btn, id, fromJournal = false) {
+            if(fromJournal) {
+                document.getElementById(`journal-${id}`).style.display = 'none'; // Close journal to focus on prayer
+            } else {
+                btn.style.display = 'none';
+            }
+            
+            const box = document.getElementById(`prayer-${id}`);
+            const data = DEVOTIONALS.find(d => d.id === id);
+            box.style.display = 'block';
+
+            if(box.querySelectorAll('.prayer-line').length === 0) {
+                data.prayerLines.forEach((line, index) => {
+                    const p = document.createElement('p');
+                    p.className = 'prayer-line';
+                    p.textContent = line;
+                    p.style.animationDelay = `${index * 1.5}s`;
+                    box.insertBefore(p, box.firstChild);
+                });
+            }
+        }
+
+        function triggerEcho(btn) {
+            // Ripple Animation
+            const ripple = document.createElement('div');
+            ripple.className = 'ripple';
+            btn.parentElement.appendChild(ripple);
+            
+            // Haptic
+            if(navigator.vibrate) navigator.vibrate([50, 50, 50]);
+            
+            setTimeout(() => ripple.remove(), 1000);
+        }
+
+        // --- DYNAMIC ATMOSPHERE OBSERVER ---
+        function setupObserver() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                        
+                        // Update CSS Variables for Background Gradient
+                        const colors = JSON.parse(entry.target.dataset.colors);
+                        document.documentElement.style.setProperty('--atm-1', colors[0]);
+                        document.documentElement.style.setProperty('--atm-2', colors[1]);
+                        document.documentElement.style.setProperty('--atm-3', colors[2]);
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            document.querySelectorAll('.slide').forEach(slide => observer.observe(slide));
+        }
+
+        // --- SILENCE TIMER ---
+        function startSilence() {
+            const overlay = document.getElementById('silence-overlay');
+            const display = document.getElementById('timer-display');
+            overlay.classList.add('active');
+            let timeLeft = 60;
+            display.textContent = "01:00";
+            if(state.silenceInterval) clearInterval(state.silenceInterval);
+            
+            state.silenceInterval = setInterval(() => {
+                timeLeft--;
+                const m = Math.floor(timeLeft / 60);
+                const s = timeLeft % 60;
+                display.textContent = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+                if (timeLeft <= 0) {
+                    clearInterval(state.silenceInterval);
+                    display.textContent = "Amen.";
+                }
+            }, 1000);
+        }
+
+        function stopSilence() {
+            document.getElementById('silence-overlay').classList.remove('active');
+            if(state.silenceInterval) clearInterval(state.silenceInterval);
+        }
+
+        // --- UTILS & SETTINGS ---
+        function toggleSabbath() {
+            document.body.classList.toggle('sabbath-mode');
+            document.getElementById('sabbath-toggle').classList.toggle('active');
+        }
+        
+        function toggleHold(id, container) {
+            const textEl = container.querySelector('.scripture-text');
+            const data = DEVOTIONALS.find(d => d.id === id);
+            const index = state.heldWords.findIndex(w => w.id === id);
+
+            if (index === -1) {
+                state.heldWords.push({ id: data.id, text: data.scripture, ref: data.ref });
+                textEl.classList.add('held');
+            } else {
+                state.heldWords.splice(index, 1);
+                textEl.classList.remove('held');
+            }
+
+            localStorage.setItem('dailyGrace_held', JSON.stringify(state.heldWords));
+            renderHeldWords();
+        }
+
+        function renderHeldWords() {
+            const list = document.getElementById('held-list');
+            if (state.heldWords.length === 0) {
+                list.innerHTML = '<p style="font-size: 0.8rem; color: #555;">Double-tap verse text to hold...</p>';
+                return;
+            }
+            list.innerHTML = '';
+            state.heldWords.forEach(item => {
+                const div = document.createElement('div');
+                div.innerHTML = `<p style="font-size:0.9rem; color:#ddd; font-style:italic; margin-bottom:5px;">"${item.text.substring(0, 50)}..."</p><span style="font-size:0.75rem; color:var(--text-dim);">${item.ref}</span>`;
+                div.style.marginBottom = '20px';
+                list.appendChild(div);
+            });
+        }
+        
+        function toggleBreath() {
+            state.breathEnabled = !state.breathEnabled;
+            document.getElementById('breath-toggle').classList.toggle('active');
+            document.querySelectorAll('.scripture-container').forEach(el => {
+                if (state.breathEnabled) el.classList.add('breathe-active');
+                else el.classList.remove('breathe-active');
+            });
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('active');
+        }
+
+        function createParticles() {
+            const bg = document.getElementById('bg-layer');
+            for(let i=0; i<20; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = Math.random() * 4 + 1;
+                p.style.width = `${size}px`;
+                p.style.height = `${size}px`;
+                p.style.left = `${Math.random() * 100}%`;
+                p.style.animationDuration = `${Math.random() * 15 + 10}s`;
+                p.style.animationDelay = `${Math.random() * 5}s`;
+                bg.appendChild(p);
+            }
+        }
+
+        function toggleAudio() {
+            const btn = document.getElementById('audio-btn');
+            if (state.isAudioPlaying) {
+                state.audioContext.close();
+                state.isAudioPlaying = false;
+                btn.classList.remove('active');
+            } else {
+                state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const freq = [164.81, 207.65, 246.94]; 
+                freq.forEach(f => {
+                    const osc = state.audioContext.createOscillator();
+                    const gain = state.audioContext.createGain();
+                    osc.type = 'triangle'; osc.frequency.value = f;
+                    const lfo = state.audioContext.createOscillator();
+                    lfo.type = 'sine'; lfo.frequency.value = 0.1 + Math.random() * 0.1;
+                    const lfoGain = state.audioContext.createGain();
+                    lfoGain.gain.value = 0.02;
+                    osc.connect(gain); lfo.connect(lfoGain); lfoGain.connect(gain.gain);
+                    gain.connect(state.audioContext.destination); gain.gain.value = 0.03; 
+                    osc.start(); lfo.start();
+                });
+                state.isAudioPlaying = true;
+                btn.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>
