@@ -8,7 +8,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Lato:ital,wght@0,300;0,400;0,700;1,400&family=WindSong&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400&family=WindSong&display=swap" rel="stylesheet">
 
     <style>
         /* --- VARIABLES --- */
@@ -16,19 +16,21 @@
             --text-light: #F7FAFC;
             --text-dim: #A0AEC0;
             --accent: #D4AF37; /* Metallic Gold */
-            --glass-bg: rgba(23, 25, 35, 0.6);
-            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(20, 20, 25, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-highlight: rgba(255, 255, 255, 0.15);
             --font-display: 'Cinzel', serif;
             --font-body: 'Lato', sans-serif;
             --font-script: 'WindSong', cursive;
             
-            /* Dynamic Atmosphere Defaults (Deep Blue) */
+            /* Dynamic Atmosphere Defaults */
             --atm-1: #0f1216;
             --atm-2: #1a202c;
             --atm-3: #151921;
+            --card-glow: rgba(212, 175, 55, 0.1);
         }
 
-        /* --- GLOBAL RESET & LAYOUT --- */
+        /* --- GLOBAL RESET --- */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
         body {
@@ -38,389 +40,269 @@
             overflow: hidden;
             height: 100vh;
             width: 100vw;
-            transition: background 1.5s ease; /* Smooth atmosphere transition */
+            transition: background 1.5s ease;
         }
 
-        /* --- SABBATH MODE --- */
-        body.sabbath-mode .interaction-layer,
-        body.sabbath-mode .date-badge,
-        body.sabbath-mode .scripture-ref,
-        body.sabbath-mode .sidebar-btn,
-        body.sabbath-mode .journal-toggle {
-            display: none !important;
-        }
-        
-        body.sabbath-mode .content-card {
-            background: transparent;
-            border: none;
-            box-shadow: none;
-            backdrop-filter: none;
-        }
-        
-        body.sabbath-mode .scripture-text {
-            font-size: 1.8rem;
-            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+        /* --- TEXTURE OVERLAY (The "Film Grain") --- */
+        .noise-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: -1;
+            opacity: 0.07;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
         }
 
         /* --- ANIMATED BACKGROUND --- */
         .ambient-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: -10;
             background: linear-gradient(135deg, var(--atm-1) 0%, var(--atm-2) 50%, var(--atm-3) 100%);
             background-size: 200% 200%;
-            transition: background 1.5s ease; /* Critical for the shift effect */
-            animation: gradientShift 20s ease infinite;
+            transition: background 1.5s ease;
+            animation: gradientShift 30s ease infinite;
         }
+        @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        /* Particles */
+        /* Floating Particles */
         .particle {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 50%;
-            z-index: -9;
-            pointer-events: none;
+            position: absolute; background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%; z-index: -9; pointer-events: none;
             animation: floatUp linear infinite;
         }
+        @keyframes floatUp { from { transform: translateY(110vh) scale(0.5); opacity: 0; } 30% { opacity: 0.3; } to { transform: translateY(-10vh) scale(1); opacity: 0; } }
 
-        @keyframes floatUp {
-            from { transform: translateY(110vh) scale(0.5); opacity: 0; }
-            30% { opacity: 0.4; }
-            to { transform: translateY(-10vh) scale(1); opacity: 0; }
-        }
-
-        /* --- UI LAYERS --- */
-        
-        /* 1. THE GATE (Intro) */
-        #gate-layer {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 100;
-            background: #0f1216;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            transition: opacity 1.5s ease, visibility 1.5s;
-        }
-        
-        #gate-layer.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-
-        .gate-question {
-            font-family: var(--font-display);
-            font-size: 1.5rem;
-            margin-bottom: 40px;
-            opacity: 0;
-            animation: fadeIn 2s ease forwards;
-        }
-
-        .mood-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            opacity: 0;
-            animation: fadeIn 2s ease 1s forwards;
-        }
-
-        .mood-btn {
-            background: transparent;
-            border: 1px solid var(--glass-border);
-            color: var(--text-dim);
-            padding: 15px 30px;
-            font-family: var(--font-body);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.4s ease;
-            border-radius: 2px;
-        }
-        .mood-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(212, 175, 55, 0.05); }
-
-        /* 2. MAIN FEED */
+        /* --- SCROLL SNAP CONTAINER --- */
         .snap-container {
-            height: 100vh;
-            overflow-y: scroll;
-            scroll-snap-type: y mandatory;
-            scroll-behavior: smooth;
+            height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth;
+            scrollbar-width: none;
         }
+        .snap-container::-webkit-scrollbar { display: none; }
 
+        /* --- SLIDE & CARD LAYOUT --- */
         .slide {
-            height: 100vh;
-            width: 100%;
-            scroll-snap-align: start;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            padding: 20px;
+            height: 100vh; width: 100%; scroll-snap-align: start;
+            display: flex; justify-content: center; align-items: center;
+            position: relative; padding: 20px;
         }
 
+        /* Glassmorphism 2.0 Card */
         .content-card {
-            width: 100%;
-            max-width: 500px;
+            width: 100%; max-width: 550px;
             background: var(--glass-bg);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--glass-border);
-            border-radius: 16px;
+            border-top: 1px solid var(--glass-highlight); /* Top highlight for depth */
+            border-radius: 24px;
             padding: 40px 30px;
             text-align: center;
-            opacity: 0;
-            transform: translateY(20px);
+            opacity: 0; transform: translateY(30px) scale(0.98);
             transition: all 1s cubic-bezier(0.2, 0.8, 0.2, 1);
             max-height: 85vh;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            /* Hide scrollbar within card */
-            scrollbar-width: none; 
+            display: flex; flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 100px var(--card-glow); /* Ambient Glow */
+            scrollbar-width: none; overflow-y: auto;
         }
         .content-card::-webkit-scrollbar { display: none; }
-        /* Allow card internal scroll if content is long */
-        .content-card { overflow-y: auto; } 
 
-        .slide.active .content-card { opacity: 1; transform: translateY(0); }
+        .slide.active .content-card { opacity: 1; transform: translateY(0) scale(1); }
 
-        /* Scripture Styles */
-        .scripture-container {
-            margin: 20px 0;
-            position: relative;
-            cursor: pointer;
-            min-height: 100px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+        /* --- TYPOGRAPHY --- */
+        .date-badge {
+            font-family: var(--font-body); font-weight: 700;
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 3px;
+            color: var(--accent); opacity: 0.9;
         }
+
+        h1 {
+            font-family: var(--font-display); font-weight: 400;
+            font-size: 2.2rem; line-height: 1.2;
+            margin-bottom: 30px; color: var(--text-light);
+            text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        /* Scripture Box */
+        .scripture-container {
+            margin: 10px 0 30px 0; position: relative; cursor: pointer;
+            min-height: 100px; display: flex; flex-direction: column; justify-content: center;
+            padding: 20px; border-radius: 12px;
+            transition: background 0.3s;
+        }
+        .scripture-container:hover { background: rgba(255,255,255,0.03); }
         
         .scripture-text {
-            font-size: 1.35rem;
-            font-family: var(--font-display);
-            line-height: 1.6;
-            color: #fff;
+            font-size: 1.4rem; font-family: var(--font-display);
+            line-height: 1.5; color: #E2E8F0;
             transition: text-shadow 0.3s ease;
         }
+        .scripture-text span { transition: opacity 0.5s ease; } /* For Lectio Mode */
 
         .breathe-active .scripture-text { animation: breathe 8s ease-in-out infinite; }
-
         @keyframes breathe {
-            0%, 100% { opacity: 0.85; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.02); text-shadow: 0 0 20px rgba(255,255,255,0.1); }
+            0%, 100% { opacity: 0.9; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.01); text-shadow: 0 0 15px rgba(255,255,255,0.15); }
         }
 
         .scripture-text.held {
-            color: var(--accent);
-            text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
-            border-left: 2px solid var(--accent);
-            padding-left: 15px;
+            color: var(--accent); border-left: 3px solid var(--accent); padding-left: 20px;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+        }
+
+        .scripture-ref {
+            font-size: 0.8rem; color: var(--text-dim); letter-spacing: 1px;
+            text-transform: uppercase; margin-top: 10px; display: block; font-weight: 600;
         }
 
         .hold-hint {
-            font-size: 0.7rem;
-            color: var(--text-dim);
-            opacity: 0;
+            font-size: 0.65rem; color: var(--text-dim); opacity: 0;
+            text-transform: uppercase; letter-spacing: 1px; margin-top: 15px;
             transition: opacity 0.3s;
-            margin-top: 8px;
-            font-style: italic;
         }
-        .scripture-container:hover .hold-hint { opacity: 0.6; }
+        .scripture-container:hover .hold-hint { opacity: 0.5; }
 
-        .scripture-ref {
-            font-size: 0.8rem;
-            color: var(--accent);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            display: block;
-            margin-top: 15px;
-            margin-bottom: 20px;
+        /* --- INTERACTION BUTTONS --- */
+        .action-btn {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            padding: 12px 28px; border-radius: 100px;
+            margin: 10px 0; cursor: pointer;
+            font-size: 0.8rem; letter-spacing: 1px; text-transform: uppercase;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
         }
+        .action-btn:hover {
+            border-color: var(--accent); color: var(--accent);
+            background: rgba(212, 175, 55, 0.05);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.1);
+        }
+        
+        .action-btn.icon-only { padding: 12px; display: flex; align-items: center; justify-content: center; border-radius: 50%; width: 44px; height: 44px; }
+        .action-btn.magic { border-color: #8B5CF6; color: #A78BFA; }
+        .action-btn.magic:hover { background: rgba(139, 92, 246, 0.1); box-shadow: 0 0 20px rgba(139, 92, 246, 0.2); }
 
-        /* --- INTERACTION LAYERS --- */
-        .interaction-layer {
-            margin-top: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        /* --- ACCORDION CONTENT --- */
+        .reflection-box, .prayer-box, .journal-box, .deepen-box {
+            text-align: left; font-size: 1.05rem; color: #CBD5E0; line-height: 1.8;
+            border-top: 1px solid var(--glass-border); padding-top: 25px; margin-bottom: 25px;
+            display: none; width: 100%; animation: slideDownFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
         }
-
-        /* Reflection & Prayer Boxes */
-        .reflection-box, .prayer-box, .journal-box {
-            text-align: left;
-            font-size: 1rem;
-            color: #E2E8F0;
-            line-height: 1.7;
-            border-top: 1px solid var(--glass-border);
-            padding-top: 20px;
-            margin-bottom: 20px;
-            display: none;
-            width: 100%;
-            animation: fadeIn 0.8s forwards;
-        }
+        @keyframes slideDownFade { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
         .prayer-line {
-            font-family: var(--font-body);
-            font-size: 1rem;
-            color: #E2E8F0;
-            margin-bottom: 12px;
-            opacity: 0;
-            transform: translateY(10px);
-            animation: fadeUpLine 1s forwards;
-            line-height: 1.6;
+            font-family: var(--font-body); font-style: italic; font-size: 1.1rem;
+            color: #E2E8F0; margin-bottom: 16px; opacity: 0;
+            transform: translateY(10px); animation: fadeUpLine 1s forwards;
         }
 
-        /* Action Buttons */
-        .action-btn {
-            background: none;
-            border: 1px solid var(--text-dim);
-            color: var(--text-dim);
-            padding: 10px 24px;
-            border-radius: 50px;
-            margin: 10px 0;
-            cursor: pointer;
-            font-size: 0.85rem;
-            letter-spacing: 1px;
-            transition: all 0.3s;
-            text-transform: uppercase;
-        }
-        .action-btn:hover { border-color: var(--accent); color: var(--accent); }
-        .action-btn.secondary { font-size: 0.75rem; border: none; opacity: 0.7; }
-
-        /* Journaling Specifics */
+        /* --- JOURNAL --- */
         .journal-box textarea {
-            width: 100%;
-            background: rgba(0,0,0,0.2);
-            border: 1px solid var(--glass-border);
-            color: var(--text-light);
-            padding: 15px;
-            border-radius: 8px;
-            font-family: var(--font-body);
-            margin-bottom: 10px;
-            resize: vertical;
-            min-height: 100px;
+            width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border);
+            color: var(--text-light); padding: 15px; border-radius: 12px;
+            font-family: var(--font-body); font-size: 1rem; margin-bottom: 15px;
+            resize: vertical; min-height: 120px; outline: none; transition: border-color 0.3s;
         }
-        .journal-box textarea:focus { outline: none; border-color: var(--accent); }
+        .journal-box textarea:focus { border-color: var(--accent); }
         .journal-prompt {
-            font-family: var(--font-display);
-            color: var(--accent);
-            margin-bottom: 10px;
-            font-size: 1.1rem;
+            font-family: var(--font-display); color: var(--accent);
+            margin-bottom: 15px; font-size: 1.1rem; line-height: 1.4;
         }
 
-        /* Amen Ripple Effect */
-        .amen-btn-container { position: relative; display: inline-block; }
+        /* --- RIPPLE EFFECT --- */
         .ripple {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px; height: 20px;
-            border-radius: 50%;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 20px; height: 20px; border-radius: 50%;
             border: 2px solid var(--accent);
-            animation: rippleEffect 1s linear forwards;
-            opacity: 0;
+            animation: rippleEffect 1.2s cubic-bezier(0, 0.2, 0.8, 1) forwards; opacity: 0; pointer-events: none;
         }
-        @keyframes rippleEffect {
-            0% { width: 0; height: 0; opacity: 0.8; }
-            100% { width: 100px; height: 100px; opacity: 0; }
-        }
+        @keyframes rippleEffect { 0% { width: 0; height: 0; opacity: 0.8; border-width: 4px; } 100% { width: 200px; height: 200px; opacity: 0; border-width: 0px; } }
+        .amen-btn-container { position: relative; display: inline-block; }
 
-        /* --- SIDEBAR --- */
-        .top-bar {
-            position: fixed;
-            top: 0; left: 0; width: 100%;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            z-index: 50;
-            pointer-events: none;
-        }
-        .top-btn {
-            pointer-events: auto;
-            background: none;
-            border: none;
-            color: var(--text-dim);
-            cursor: pointer;
-            transition: color 0.3s;
-        }
-        .top-btn:hover, .top-btn.active { color: var(--accent); }
+        /* --- SIDEBAR & NAV --- */
+        .top-bar { position: fixed; top: 0; left: 0; width: 100%; padding: 25px 30px; display: flex; justify-content: space-between; z-index: 50; pointer-events: none; }
+        .top-btn { pointer-events: auto; background: none; border: none; color: var(--text-dim); cursor: pointer; transition: all 0.3s; padding: 8px; border-radius: 50%; }
+        .top-btn:hover { color: var(--accent); background: rgba(255,255,255,0.05); }
         .top-btn svg { width: 24px; height: 24px; fill: currentColor; }
 
-        .sidebar {
-            position: fixed;
-            top: 0; left: 0; height: 100%;
-            width: 300px;
-            background: #111;
-            z-index: 60;
-            transform: translateX(-100%);
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            padding: 80px 30px 30px 30px;
-            border-right: 1px solid var(--glass-border);
-            overflow-y: auto;
-        }
-        .sidebar.open { transform: translateX(0); }
-        
-        .overlay-mask {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 55;
-            opacity: 0;
-            visibility: hidden;
-            transition: 0.3s;
-        }
+        .overlay-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 55; opacity: 0; visibility: hidden; transition: 0.4s; }
         .overlay-mask.active { opacity: 1; visibility: visible; }
 
-        /* --- SILENCE TIMER --- */
-        #silence-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #0f1216;
-            z-index: 200;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 1s ease;
+        .sidebar {
+            position: fixed; top: 0; left: 0; height: 100%; width: 320px;
+            background: #0B0C10; /* Deep matte black */
+            z-index: 60; transform: translateX(-100%);
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 80px 30px 40px 30px; border-right: 1px solid var(--glass-border);
+            overflow-y: auto; box-shadow: 20px 0 50px rgba(0,0,0,0.5);
         }
-        #silence-overlay.active { opacity: 1; visibility: visible; }
+        .sidebar.open { transform: translateX(0); }
 
-        .breathing-circle {
-            width: 100px; height: 100px;
-            border-radius: 50%;
-            border: 1px solid var(--text-dim);
-            animation: breathe-circle 6s ease-in-out infinite;
-            margin-bottom: 30px;
+        /* --- SPECIAL OVERLAYS --- */
+        #cares-overlay, #generator-overlay, #garden-overlay, #breath-prayer-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11, 12, 16, 0.95); backdrop-filter: blur(15px);
+            z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; transition: opacity 0.6s ease;
         }
-        @keyframes breathe-circle {
-            0%, 100% { transform: scale(1); opacity: 0.3; }
-            50% { transform: scale(1.5); opacity: 0.8; border-color: var(--accent); }
+        .active-overlay { opacity: 1 !important; visibility: visible !important; }
+
+        .cares-input {
+            background: transparent; border: none; border-bottom: 1px solid var(--text-dim);
+            color: var(--text-light); font-family: var(--font-display); font-size: 1.8rem;
+            text-align: center; width: 80%; max-width: 600px; padding: 15px; margin-bottom: 40px;
         }
+        .cares-input:focus { outline: none; border-color: var(--accent); }
+
+        /* Ebenezer Stones */
+        .garden-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 25px;
+            width: 100%; max-width: 700px; padding: 20px; max-height: 60vh; overflow-y: auto;
+        }
+        .stone {
+            width: 90px; height: 70px; background: #2D3748;
+            display: flex; justify-content: center; align-items: center; color: #A0AEC0; font-size: 0.75rem;
+            cursor: pointer; transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.05);
+            text-align: center; padding: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .stone:hover { transform: translateY(-5px) scale(1.05); border-color: var(--accent); color: var(--accent); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+
+        /* --- ROSE WINDOW --- */
+        #rose-window { width: 180px; height: 180px; margin: 0 auto 30px auto; display: block; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+        .window-segment { fill: #1A202C; stroke: #0B0C10; stroke-width: 0.5px; transition: fill 1.5s ease; }
+        .window-segment.lit { fill: var(--accent); fill-opacity: 0.8; filter: drop-shadow(0 0 8px var(--accent)); }
+
+        /* --- BREATH PRAYER --- */
+        .breath-text-main { font-family: var(--font-display); font-size: 2.5rem; color: var(--text-light); margin-bottom: 40px; opacity: 0; transition: opacity 1.5s; text-align: center; max-width: 80%; }
+        .breath-guide-circle { width: 220px; height: 220px; border-radius: 50%; border: 1px solid var(--accent); opacity: 0.2; transition: transform 4s ease-in-out, opacity 4s ease-in-out; background: radial-gradient(circle, rgba(212,175,55,0.1) 0%, rgba(0,0,0,0) 70%); }
+        .breath-instruction { margin-top: 50px; color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 3px; }
+
+        /* --- SHARE --- */
+        #share-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 250; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
+        canvas { max-width: 85%; max-height: 70vh; border: 1px solid var(--glass-border); border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
+
+        /* --- SILENCE --- */
+        #silence-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0B0C10; z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 1s ease; }
+        .breathing-circle { width: 120px; height: 120px; border-radius: 50%; border: 1px solid var(--text-dim); animation: breathe-circle 6s ease-in-out infinite; margin-bottom: 40px; }
+        @keyframes breathe-circle { 0%, 100% { transform: scale(1); opacity: 0.3; } 50% { transform: scale(1.4); opacity: 0.8; border-color: var(--accent); } }
+
+        /* --- GATES --- */
+        .gate-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; background: #0B0C10; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 1s ease, visibility 1s; }
+        .hidden-gate { opacity: 0; visibility: hidden; pointer-events: none; }
+        .gate-question { font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 50px; opacity: 0; animation: fadeIn 2s ease forwards; text-align: center; padding: 0 20px; }
+        .mood-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; opacity: 0; animation: fadeIn 2s ease 1s forwards; }
+        .mood-btn { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); color: var(--text-dim); padding: 18px 40px; font-family: var(--font-body); letter-spacing: 2px; text-transform: uppercase; font-size: 0.8rem; cursor: pointer; transition: all 0.4s ease; border-radius: 100px; backdrop-filter: blur(5px); }
+        .mood-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(212, 175, 55, 0.05); transform: translateY(-2px); }
 
         /* --- UTILS --- */
-        .toggle-switch {
-            width: 40px; height: 20px;
-            background: #333;
-            border-radius: 20px;
-            position: relative;
-            cursor: pointer;
-        }
-        .toggle-switch::after {
-            content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: 0.3s;
-        }
+        .toggle-switch { width: 44px; height: 24px; background: #333; border-radius: 24px; position: relative; cursor: pointer; transition: background 0.3s; }
+        .toggle-switch::after { content: ''; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: 0.3s cubic-bezier(0.4, 0.0, 0.2, 1); }
         .toggle-switch.active { background: var(--accent); }
         .toggle-switch.active::after { transform: translateX(20px); }
-        
-        .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.9rem; color: var(--text-dim); }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; font-size: 0.9rem; color: var(--text-dim); }
+        .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.1); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeUpLine { to { opacity: 1; transform: translateY(0); } }
+        .smoke-text { position: absolute; font-family: var(--font-display); font-size: 2rem; color: var(--text-dim); pointer-events: none; animation: dissipate 3.5s ease-out forwards; text-shadow: 0 0 20px rgba(0,0,0,0.8); }
+        @keyframes dissipate { 0% { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); } 100% { transform: translateY(-150px) scale(1.5) rotate(10deg); opacity: 0; filter: blur(15px); } }
 
     </style>
 </head>
@@ -429,7 +311,8 @@
     <!-- AUDIO ENGINE -->
     <audio id="ambience-audio" loop></audio>
 
-    <!-- BACKGROUND -->
+    <!-- VISUAL LAYERS -->
+    <div class="noise-overlay"></div>
     <div class="ambient-bg" id="bg-layer"></div>
 
     <!-- UI LAYER: HEADER -->
@@ -445,15 +328,51 @@
     <!-- UI LAYER: SIDEBAR -->
     <div class="overlay-mask" id="overlay" onclick="toggleSidebar()"></div>
     <aside class="sidebar" id="sidebar">
-        <h2 style="font-family:var(--font-display); color:var(--accent); margin-bottom:20px;">Sanctuary</h2>
-        <div style="font-size:0.8rem; color:#666; margin-bottom:30px;">Daily Grace v7.0</div>
-
-        <div style="margin-bottom:10px; font-weight:bold; color:#ddd;">Words I'm Holding</div>
-        <div id="held-list" style="margin-bottom:30px;">
-            <p style="font-size: 0.8rem; color: #555;">Double-tap verses to hold...</p>
+        <div style="text-align:center; margin-bottom:30px;">
+            <h2 style="font-family:var(--font-display); color:var(--text-light); font-size:1.4rem; margin-bottom:5px;">Daily Grace</h2>
+            <div style="font-size:0.7rem; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase;">Sanctuary v14</div>
+        </div>
+        
+        <!-- VISUAL HABIT TRACKER (Rose Window) -->
+        <svg id="rose-window" viewBox="0 0 100 100">
+            <!-- Segments injected by JS -->
+        </svg>
+        <div style="text-align:center; font-size:0.7rem; color:var(--text-dim); margin-top:-20px; margin-bottom:40px;">
+            <span id="grace-counter" style="color:var(--accent); font-weight:bold;">0</span> Moments of Grace
         </div>
 
-        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--glass-border);">
+        <div style="text-align:center; margin-bottom:30px;">
+            <div id="liturgical-badge" style="font-size:0.65rem; color:var(--accent); text-transform:uppercase; letter-spacing:2px; border:1px solid var(--glass-border); display:inline-block; padding:6px 12px; border-radius:100px; background:rgba(255,255,255,0.03);">
+                Ordinary Time
+            </div>
+        </div>
+        
+        <!-- BUTTONS -->
+        <button class="action-btn ai-btn" onclick="openGenerator()" style="width:100%; margin-bottom:15px; border-color:rgba(139, 92, 246, 0.5); color:#A78BFA; background:rgba(139, 92, 246, 0.05);">
+            ✨ Receive Personal Word
+        </button>
+
+        <button class="action-btn" onclick="openCaresRitual()" style="width:100%; margin-bottom:15px;">
+            Ritual: Cast Cares
+        </button>
+
+        <button class="action-btn" onclick="openGarden()" style="width:100%; margin-bottom:40px;">
+            Ebenezer Garden
+        </button>
+
+        <div style="margin-bottom:15px; font-weight:bold; color:#ddd; font-size:0.9rem;">Held Words</div>
+        <div id="held-list" style="margin-bottom:40px;">
+            <p style="font-size: 0.8rem; color: #555; font-style:italic;">Double-tap verses to hold...</p>
+        </div>
+
+        <div style="padding-top: 30px; border-top: 1px solid var(--glass-border);">
+            <div class="setting-item" style="flex-direction:column; align-items:flex-start; gap:10px;">
+                <span>Gemini API Key</span>
+                <input type="password" id="api-key-input" placeholder="Paste API Key here..." 
+                       style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); padding:10px; border-radius:8px; color:var(--text-light); font-size:0.8rem; outline:none;"
+                       onchange="saveApiKey(this.value)">
+                <span id="key-saved-msg" style="font-size:0.7rem; color:var(--accent); opacity:0; transition:opacity 0.3s;">Key Saved</span>
+            </div>
             <div class="setting-item">
                 <span>Breath Sync</span>
                 <div class="toggle-switch active" id="breath-toggle" onclick="toggleBreath()"></div>
@@ -465,23 +384,90 @@
         </div>
     </aside>
 
+    <!-- UI LAYER: GENERATOR OVERLAY -->
+    <div id="generator-overlay">
+        <h2 style="font-family:var(--font-display); color:#A78BFA; margin-bottom:10px;">Receive a Word</h2>
+        <p style="color:var(--text-dim); margin-bottom:40px; font-size:1rem; text-align:center;">What is weighing on your heart?</p>
+        <input type="text" id="generator-input" class="cares-input" placeholder="e.g. Anxiety, Hope..." autocomplete="off">
+        <div style="display:flex; gap:20px;">
+            <button class="action-btn secondary" onclick="closeGenerator()">Cancel</button>
+            <button class="action-btn ai-btn" onclick="generateDevotional()" style="border-color:#8B5CF6; color:#A78BFA;">
+                <span id="gen-btn-text">Generate ✨</span>
+            </button>
+        </div>
+        <div id="gen-feedback" style="margin-top:20px; height:20px; color:var(--text-dim); font-size:0.8rem; opacity:0; transition:opacity 0.3s;">Listening...</div>
+    </div>
+
+    <!-- UI LAYER: CAST CARES OVERLAY -->
+    <div id="cares-overlay">
+        <h2 style="font-family:var(--font-display); color:var(--text-light); margin-bottom:15px; font-size:1.8rem;">Cast Your Cares</h2>
+        <p style="color:var(--text-dim); margin-bottom:50px; font-size:1rem; max-width:80%; text-align:center; line-height:1.6;">"Cast all your anxiety on him<br>because he cares for you."</p>
+        <input type="text" id="care-input" class="cares-input" placeholder="Name your burden..." autocomplete="off">
+        <div style="display:flex; gap:20px;">
+            <button class="action-btn secondary" onclick="closeCaresRitual()">Cancel</button>
+            <button class="action-btn" onclick="releaseCare()" style="border-color:var(--accent); color:var(--accent);">Release</button>
+        </div>
+        <div id="cares-feedback" style="margin-top:20px; height:20px; color:var(--accent); font-size:0.9rem; opacity:0; transition:opacity 1s;">It is carried.</div>
+    </div>
+
+    <!-- UI LAYER: EBENEZER GARDEN -->
+    <div id="garden-overlay">
+        <h2 style="font-family:var(--font-display); color:var(--text-light); margin-bottom:10px;">Ebenezer Garden</h2>
+        <p style="color:var(--text-dim); margin-bottom:40px; font-size:0.9rem; text-align:center;">Stones of remembrance for burdens carried.</p>
+        <div id="garden-grid" class="garden-grid">
+            <!-- Stones injected here -->
+        </div>
+        <button class="action-btn secondary" onclick="closeGarden()" style="margin-top:30px;">Return</button>
+    </div>
+
+    <!-- UI LAYER: BREATH PRAYER MODE -->
+    <div id="breath-prayer-overlay">
+        <div id="breath-text" class="breath-text-main"></div>
+        <div id="breath-circle" class="breath-guide-circle"></div>
+        <div id="breath-instruction" class="breath-instruction">Inhale</div>
+        <button class="action-btn secondary" onclick="stopBreathPrayer()" style="margin-top:60px;">Amen</button>
+    </div>
+
+    <!-- UI LAYER: SHARE GENERATOR -->
+    <div id="share-overlay">
+        <canvas id="share-canvas"></canvas>
+        <div style="margin-top:20px; display:flex; gap:20px;">
+            <button class="action-btn secondary" onclick="closeShare()">Close</button>
+            <a id="download-link" class="action-btn" style="border-color:var(--accent); color:var(--accent); text-decoration:none;">Download Card</a>
+        </div>
+    </div>
+
     <!-- UI LAYER: SILENCE TIMER -->
     <div id="silence-overlay">
         <div class="breathing-circle"></div>
-        <div style="font-family:var(--font-display); font-size:1.2rem; margin-bottom:10px;">Be Still</div>
-        <div id="timer-display" style="font-family:var(--font-body); color:var(--text-dim);">01:00</div>
-        <button class="action-btn secondary" onclick="stopSilence()" style="margin-top:30px;">Return</button>
+        <div style="font-family:var(--font-display); font-size:1.4rem; margin-bottom:15px; color:var(--text-light);">Be Still</div>
+        <div id="timer-display" style="font-family:var(--font-body); color:var(--text-dim); letter-spacing:2px;">01:00</div>
+        <button class="action-btn secondary" onclick="stopSilence()" style="margin-top:40px;">Return</button>
     </div>
 
-    <!-- UI LAYER: GATE (Intro) -->
-    <section id="gate-layer">
-        <div class="gate-content">
+    <!-- UI LAYER: DAY GATE -->
+    <section id="gate-layer" class="gate-layer">
+        <div style="max-width:500px; text-align:center;">
             <h1 class="gate-question">How is your heart today?</h1>
             <div class="mood-grid">
                 <button class="mood-btn" onclick="enterApp('Weary')">Weary</button>
                 <button class="mood-btn" onclick="enterApp('Grateful')">Grateful</button>
                 <button class="mood-btn" onclick="enterApp('Anxious')">Anxious</button>
                 <button class="mood-btn" onclick="enterApp('Hopeful')">Hopeful</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- UI LAYER: COMPLINE GATE -->
+    <section id="compline-gate" class="gate-layer hidden-gate">
+        <div style="max-width:500px; text-align:center;">
+            <h1 class="gate-question" style="color:var(--accent);">The day is done.</h1>
+            <p style="text-align:center; color:var(--text-dim); margin-bottom:40px; line-height:1.8; font-size:1.1rem;">
+                Return to your rest, my soul,<br>for the Lord has been good to you.
+            </p>
+            <div class="mood-grid">
+                <button class="mood-btn" onclick="enterApp('Peace')">Find Peace</button>
+                <button class="mood-btn" onclick="enterApp('Night')">Review Day</button>
             </div>
         </div>
     </section>
@@ -493,102 +479,113 @@
 
     <script>
         // ============================
+        //  GEMINI API CONFIG
+        // ============================
+        let apiKey = ""; 
+        
+        // ============================
         //  DATA
         // ============================
-        const DEVOTIONALS = [
+        let DEVOTIONALS = [
             {
                 id: 1,
-                tags: ['Anxious', 'Weary'],
-                colors: ['#0f1216', '#2d3748', '#1a202c'], // Cool deep blues
+                tags: ['Anxious', 'Weary', 'Night'],
+                colors: ['#0f1216', '#2d3748', '#1a202c'],
                 date: "Today",
                 title: "Be Still",
                 scripture: "He says, 'Be still, and know that I am God; I will be exalted among the nations, I will be exalted in the earth.'",
                 ref: "Psalm 46:10",
                 reflection: "Stillness is not merely the absence of noise; it is the presence of focus. In the rush of this digital age, we fear silence because in silence, we must face ourselves. But God invites you into the quiet.",
                 prompt: "What is the loudest 'noise' in your mind right now?",
-                prayerLines: ["Lord, the noise is loud.", "Teach my heart stillness.", "I let go of control.", "I trust You are God."]
+                prayerLines: ["Lord, the noise is loud.", "Teach my heart stillness.", "I let go of control.", "I trust You are God."],
+                breathPhrases: ["Be still...", "And know that I am God"]
             },
             {
                 id: 2,
-                tags: ['Weary', 'Hopeful'],
-                colors: ['#1C1917', '#44403C', '#292524'], // Warm Stone/Sepia
+                tags: ['Weary', 'Hopeful', 'Night', 'Peace'],
+                colors: ['#1C1917', '#44403C', '#292524'],
                 date: "Yesterday",
                 title: "Come to Me",
                 scripture: "Come to me, all you who are weary and burdened, and I will give you rest. Take my yoke upon you and learn from me.",
                 ref: "Matthew 11:28",
                 reflection: "The Shepherd's promise is not just provision, but presence. He doesn't just send you to the water; He leads you there. Walk with Him today.",
                 prompt: "What heavy burden can you physically visualize handing to Jesus?",
-                prayerLines: ["Jesus, I am tired.", "I trade my yoke for grace.", "Teach me to rest.", "Thank You for carrying this."]
+                prayerLines: ["Jesus, I am tired.", "I trade my yoke for grace.", "Teach me to rest.", "Thank You for carrying this."],
+                breathPhrases: ["Come to me...", "And I will give you rest"]
             },
             {
                 id: 3,
                 tags: ['Grateful', 'Hopeful'],
-                colors: ['#1e1b4b', '#312e81', '#4338ca'], // Indigo/Sunrise
+                colors: ['#1e1b4b', '#312e81', '#4338ca'],
                 date: "Jan 1",
                 title: "New Mercies",
                 scripture: "Because of the Lord’s great love we are not consumed, for his compassions never fail. They are new every morning.",
                 ref: "Lamentations 3:22",
                 reflection: "Yesterday's failures do not define today's potential. As the sun rose this morning, so did a fresh batch of God's mercy.",
                 prompt: "Name one specific mercy you experienced yesterday.",
-                prayerLines: ["Father, thank You.", "I don't run on past grace.", "I receive fresh mercy.", "Great is Your faithfulness."]
+                prayerLines: ["Father, thank You.", "I don't run on past grace.", "I receive fresh mercy.", "Great is Your faithfulness."],
+                breathPhrases: ["Your compassions...", "Never fail"]
             },
             {
                 id: 4,
-                tags: ['Anxious'],
-                colors: ['#111827', '#1F2937', '#374151'], // Deep Gray/Slate
+                tags: ['Anxious', 'Peace'],
+                colors: ['#111827', '#1F2937', '#374151'],
                 date: "Wisdom",
                 title: "Peace I Leave",
                 scripture: "Peace I leave with you; my peace I give you. I do not give to you as the world gives. Do not let your hearts be troubled.",
                 ref: "John 14:27",
                 reflection: "This peace is not a feeling; it is a person. It is a guard standing watch over the door of your heart.",
                 prompt: "Where do you feel 'trouble' in your body? Breathe peace into that spot.",
-                prayerLines: ["Prince of Peace,", "Quiet the storm.", "I accept Your gift.", "Guard my heart."]
+                prayerLines: ["Prince of Peace,", "Quiet the storm.", "I accept Your gift.", "Guard my heart."],
+                breathPhrases: ["Peace I leave...", "Do not be afraid"]
+            },
+            {
+                id: 5,
+                tags: ['Night'],
+                colors: ['#020617', '#172554', '#1e1b4b'], 
+                date: "Compline",
+                title: "Shadow of Wings",
+                scripture: "He will cover you with his feathers, and under his wings you will find refuge; his faithfulness will be your shield and rampart.",
+                ref: "Psalm 91:4",
+                reflection: "As the day ends, there is nothing left to achieve. The work is done. You are safe to shut your eyes, not because the world is safe, but because your Keeper is awake.",
+                prompt: "What moment today do you need to release before you sleep?",
+                prayerLines: ["Keeper of Israel,", "Watch over me as I sleep.", "I release my day to You.", "Wake me with mercy."],
+                breathPhrases: ["Under His wings...", "I find refuge"]
             }
         ];
 
         // ============================
-        //  STATE
+        //  STATE & INIT
         // ============================
         const state = {
             mood: null,
             heldWords: JSON.parse(localStorage.getItem('dailyGrace_held')) || [],
             savedNotes: JSON.parse(localStorage.getItem('dailyGrace_notes')) || {},
+            ebenezers: JSON.parse(localStorage.getItem('dailyGrace_ebenezers')) || [],
+            userApiKey: localStorage.getItem('dailyGrace_apiKey') || "", 
+            graceCount: parseInt(localStorage.getItem('dailyGrace_visits')) || 0,
             audioContext: null,
             isAudioPlaying: false,
             breathEnabled: true,
-            silenceInterval: null
+            silenceInterval: null,
+            breathInterval: null,
+            isCompline: false
         };
 
-        // ============================
-        //  INIT & LOGIC
-        // ============================
         document.addEventListener('DOMContentLoaded', () => {
             createParticles();
             renderHeldWords();
+            checkTimeAndSeason();
+            incrementGrace();
+            renderLivingWindow(); 
+            
+            if(state.userApiKey) {
+                document.getElementById('api-key-input').value = state.userApiKey;
+                apiKey = state.userApiKey;
+            }
         });
 
-        function enterApp(selectedMood) {
-            state.mood = selectedMood;
-            
-            // Sort Data
-            DEVOTIONALS.sort((a, b) => {
-                const aMatch = a.tags.includes(selectedMood);
-                const bMatch = b.tags.includes(selectedMood);
-                return bMatch - aMatch; 
-            });
-
-            // Render
-            renderFeed();
-
-            // Animate Gate
-            const gate = document.getElementById('gate-layer');
-            gate.style.opacity = '0';
-            setTimeout(() => {
-                gate.classList.add('hidden');
-                setupObserver(); 
-            }, 1500);
-        }
-
+        // --- CORE RENDER FUNCTION ---
         function renderFeed() {
             const container = document.getElementById('feed');
             container.innerHTML = '';
@@ -599,38 +596,53 @@
                 
                 const slide = document.createElement('section');
                 slide.className = 'slide';
-                slide.dataset.colors = JSON.stringify(data.colors); // Store colors for observer
-                
+                slide.dataset.colors = JSON.stringify(data.colors || ['#0f1216', '#2d3748', '#1a202c']); 
+                slide.id = `slide-${data.id}`;
+
                 slide.innerHTML = `
                     <div class="content-card">
-                        <span class="date-badge" style="color:var(--accent); font-size:0.75rem; letter-spacing:2px; margin-bottom:10px;">${data.date}</span>
-                        <h1 style="font-family:var(--font-display); font-size:2rem; margin-bottom:20px;">${data.title}</h1>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:10px;">
+                            <span class="date-badge">${data.date}</span>
+                            <div style="display:flex; gap:8px;">
+                                <button class="action-btn icon-only" onclick="startBreathPrayer(${data.id})" title="Breath Prayer">
+                                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                                </button>
+                                <button class="action-btn icon-only" onclick="startLectioMode(${data.id})" title="Lectio Mode">
+                                    <svg viewBox="0 0 24 24"><path d="M6 2h12v6l-4 4 4 4v6H6v-6l4-4-4-4V2zm10 14.5V18H8v-1.5l4-4 4 4zm-4-5l-4-4V4h8v4.5l-4 4z"/></svg>
+                                </button>
+                                <button class="action-btn icon-only" onclick="generateShareImage(${data.id})" title="Create Sanctuary Card">
+                                    <svg viewBox="0 0 24 24"><path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <h1 style="color:var(--text-light);">${data.title}</h1>
                         
-                        <div class="scripture-container ${state.breathEnabled ? 'breathe-active' : ''}" ondblclick="toggleHold(${data.id}, this)">
+                        <div class="scripture-container ${state.breathEnabled ? 'breathe-active' : ''}" ondblclick="toggleHold(${data.id}, this)" id="scripture-box-${data.id}">
                             <p class="scripture-text ${isHeld ? 'held' : ''}">${data.scripture}</p>
                             <div class="hold-hint">Double-tap to hold</div>
                         </div>
                         <span class="scripture-ref">${data.ref}</span>
 
-                        <!-- INTERACTION LAYERS -->
                         <div class="interaction-layer">
+                            <div style="display:flex; gap:15px; width:100%; justify-content:center;">
+                                <button class="action-btn" id="btn-ref-${data.id}" onclick="revealReflection(${data.id})">
+                                    Read Reflection
+                                </button>
+                                <button class="action-btn ai-btn magic" id="btn-deep-${data.id}" onclick="deepenContext(${data.id}, this)" title="Get context via Gemini" style="display:none;">
+                                    Deepen 🔍
+                                </button>
+                            </div>
                             
-                            <!-- 1. Reflection -->
-                            <button class="action-btn" id="btn-ref-${data.id}" onclick="revealReflection(${data.id})">
-                                Read Reflection
-                            </button>
                             <div class="reflection-box" id="ref-${data.id}">
                                 <p>${data.reflection}</p>
-                                
-                                <!-- 2. Journaling (Heart Notes) -->
-                                <button class="action-btn journal-toggle" onclick="revealJournal(this, ${data.id})" style="margin-top:20px; width:100%;">
+                                <div id="deepen-content-${data.id}" class="deepen-box" style="border-top:1px dashed #8B5CF6; margin-top:20px; padding-top:20px;"></div>
+                                <button class="action-btn journal-toggle" onclick="revealJournal(this, ${data.id})" style="margin-top:25px; width:100%;">
                                     Open Heart Notes ${existingNote ? '✎' : ''}
                                 </button>
                             </div>
 
-                            <!-- Journal Content -->
                             <div class="journal-box" id="journal-${data.id}">
-                                <div class="journal-prompt">${data.prompt}</div>
+                                <div class="journal-prompt">${data.prompt || "Write what is on your heart..."}</div>
                                 <textarea id="note-${data.id}" placeholder="Type your heart here...">${existingNote}</textarea>
                                 <div style="display:flex; gap:10px;">
                                     <button class="action-btn secondary" onclick="saveJournal(${data.id})">Save Note</button>
@@ -640,13 +652,11 @@
                                 </div>
                             </div>
 
-                            <!-- 3. Prayer Content -->
                             <div class="prayer-box" id="prayer-${data.id}">
-                                <!-- Lines injected here -->
                                 <div class="amen-btn-container" style="width:100%; margin-top:20px; display:flex; justify-content:center;">
                                     <button class="action-btn" onclick="triggerEcho(this)">Amen</button>
                                 </div>
-                                <button class="action-btn secondary" onclick="startSilence()" style="margin-top:15px; width:100%;">
+                                <button class="action-btn secondary" onclick="startSilence()" style="margin-top:20px; width:100%;">
                                     Sit in Silence
                                 </button>
                             </div>
@@ -654,203 +664,178 @@
                     </div>
                 `;
                 container.appendChild(slide);
+                setTimeout(() => {
+                   const deepBtn = document.getElementById(`btn-deep-${data.id}`);
+                   if(deepBtn) deepBtn.style.display = 'inline-block';
+                }, 500);
             });
         }
 
-        // --- INTERACTION LOGIC ---
-        function revealReflection(id) {
-            document.getElementById(`btn-ref-${id}`).style.display = 'none';
-            document.getElementById(`ref-${id}`).style.display = 'block';
-        }
-
-        function revealJournal(btn, id) {
-            btn.style.display = 'none';
-            document.getElementById(`journal-${id}`).style.display = 'block';
-        }
-
-        function saveJournal(id) {
-            const text = document.getElementById(`note-${id}`).value;
-            state.savedNotes[id] = text;
-            localStorage.setItem('dailyGrace_notes', JSON.stringify(state.savedNotes));
-            
-            // Visual feedback
-            const btn = document.querySelector(`#journal-${id} .secondary`);
-            const originalText = btn.textContent;
-            btn.textContent = "Saved";
-            setTimeout(() => btn.textContent = originalText, 2000);
-        }
-
-        function revealPrayer(btn, id, fromJournal = false) {
-            if(fromJournal) {
-                document.getElementById(`journal-${id}`).style.display = 'none'; // Close journal to focus on prayer
-            } else {
-                btn.style.display = 'none';
-            }
-            
-            const box = document.getElementById(`prayer-${id}`);
-            const data = DEVOTIONALS.find(d => d.id === id);
-            box.style.display = 'block';
-
-            if(box.querySelectorAll('.prayer-line').length === 0) {
-                data.prayerLines.forEach((line, index) => {
-                    const p = document.createElement('p');
-                    p.className = 'prayer-line';
-                    p.textContent = line;
-                    p.style.animationDelay = `${index * 1.5}s`;
-                    box.insertBefore(p, box.firstChild);
-                });
-            }
-        }
-
-        function triggerEcho(btn) {
-            // Ripple Animation
-            const ripple = document.createElement('div');
-            ripple.className = 'ripple';
-            btn.parentElement.appendChild(ripple);
-            
-            // Haptic
-            if(navigator.vibrate) navigator.vibrate([50, 50, 50]);
-            
-            setTimeout(() => ripple.remove(), 1000);
-        }
-
-        // --- DYNAMIC ATMOSPHERE OBSERVER ---
-        function setupObserver() {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('active');
-                        
-                        // Update CSS Variables for Background Gradient
-                        const colors = JSON.parse(entry.target.dataset.colors);
-                        document.documentElement.style.setProperty('--atm-1', colors[0]);
-                        document.documentElement.style.setProperty('--atm-2', colors[1]);
-                        document.documentElement.style.setProperty('--atm-3', colors[2]);
-                    }
-                });
-            }, { threshold: 0.5 });
-            
-            document.querySelectorAll('.slide').forEach(slide => observer.observe(slide));
-        }
-
-        // --- SILENCE TIMER ---
-        function startSilence() {
-            const overlay = document.getElementById('silence-overlay');
-            const display = document.getElementById('timer-display');
-            overlay.classList.add('active');
-            let timeLeft = 60;
-            display.textContent = "01:00";
-            if(state.silenceInterval) clearInterval(state.silenceInterval);
-            
-            state.silenceInterval = setInterval(() => {
-                timeLeft--;
-                const m = Math.floor(timeLeft / 60);
-                const s = timeLeft % 60;
-                display.textContent = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-                if (timeLeft <= 0) {
-                    clearInterval(state.silenceInterval);
-                    display.textContent = "Amen.";
-                }
-            }, 1000);
-        }
-
-        function stopSilence() {
-            document.getElementById('silence-overlay').classList.remove('active');
-            if(state.silenceInterval) clearInterval(state.silenceInterval);
-        }
-
-        // --- UTILS & SETTINGS ---
-        function toggleSabbath() {
-            document.body.classList.toggle('sabbath-mode');
-            document.getElementById('sabbath-toggle').classList.toggle('active');
-        }
+        // --- FEATURES ---
         
-        function toggleHold(id, container) {
-            const textEl = container.querySelector('.scripture-text');
-            const data = DEVOTIONALS.find(d => d.id === id);
-            const index = state.heldWords.findIndex(w => w.id === id);
+        function renderLivingWindow() {
+            const svg = document.getElementById('rose-window');
+            svg.innerHTML = '';
+            const daysVisited = state.graceCount;
+            const totalSegments = 30; const center = 50;
+            
+            // Center Rose
+            const centerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            centerCircle.setAttribute("cx", center); centerCircle.setAttribute("cy", center); centerCircle.setAttribute("r", 8);
+            centerCircle.setAttribute("class", "window-segment " + (daysVisited > 0 ? "lit" : ""));
+            svg.appendChild(centerCircle);
 
-            if (index === -1) {
-                state.heldWords.push({ id: data.id, text: data.scripture, ref: data.ref });
-                textEl.classList.add('held');
+            // Petals
+            for(let i=0; i<totalSegments; i++) {
+                const angle = (i / totalSegments) * Math.PI * 2;
+                const nextAngle = ((i+1) / totalSegments) * Math.PI * 2;
+                const r1 = 12; const r2 = 45;
+                const x1 = center + r1 * Math.cos(angle); const y1 = center + r1 * Math.sin(angle);
+                const x2 = center + r2 * Math.cos(angle); const y2 = center + r2 * Math.sin(angle);
+                const x3 = center + r2 * Math.cos(nextAngle); const y3 = center + r2 * Math.sin(nextAngle);
+                const x4 = center + r1 * Math.cos(nextAngle); const y4 = center + r1 * Math.sin(nextAngle);
+                const d = `M ${x1} ${y1} L ${x2} ${y2} A ${r2} ${r2} 0 0 1 ${x3} ${y3} L ${x4} ${y4} A ${r1} ${r1} 0 0 0 ${x1} ${y1}`;
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", d);
+                path.setAttribute("class", "window-segment " + (daysVisited > i + 1 ? "lit" : ""));
+                svg.appendChild(path);
+            }
+        }
+
+        function openGarden() {
+            toggleSidebar();
+            const overlay = document.getElementById('garden-overlay');
+            const grid = document.getElementById('garden-grid');
+            overlay.classList.add('active-overlay');
+            grid.innerHTML = '';
+            
+            if(state.ebenezers.length === 0) {
+                grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#555;">No burdens carried yet.</p>';
             } else {
-                state.heldWords.splice(index, 1);
-                textEl.classList.remove('held');
-            }
-
-            localStorage.setItem('dailyGrace_held', JSON.stringify(state.heldWords));
-            renderHeldWords();
-        }
-
-        function renderHeldWords() {
-            const list = document.getElementById('held-list');
-            if (state.heldWords.length === 0) {
-                list.innerHTML = '<p style="font-size: 0.8rem; color: #555;">Double-tap verse text to hold...</p>';
-                return;
-            }
-            list.innerHTML = '';
-            state.heldWords.forEach(item => {
-                const div = document.createElement('div');
-                div.innerHTML = `<p style="font-size:0.9rem; color:#ddd; font-style:italic; margin-bottom:5px;">"${item.text.substring(0, 50)}..."</p><span style="font-size:0.75rem; color:var(--text-dim);">${item.ref}</span>`;
-                div.style.marginBottom = '20px';
-                list.appendChild(div);
-            });
-        }
-        
-        function toggleBreath() {
-            state.breathEnabled = !state.breathEnabled;
-            document.getElementById('breath-toggle').classList.toggle('active');
-            document.querySelectorAll('.scripture-container').forEach(el => {
-                if (state.breathEnabled) el.classList.add('breathe-active');
-                else el.classList.remove('breathe-active');
-            });
-        }
-
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('overlay').classList.toggle('active');
-        }
-
-        function createParticles() {
-            const bg = document.getElementById('bg-layer');
-            for(let i=0; i<20; i++) {
-                const p = document.createElement('div');
-                p.className = 'particle';
-                const size = Math.random() * 4 + 1;
-                p.style.width = `${size}px`;
-                p.style.height = `${size}px`;
-                p.style.left = `${Math.random() * 100}%`;
-                p.style.animationDuration = `${Math.random() * 15 + 10}s`;
-                p.style.animationDelay = `${Math.random() * 5}s`;
-                bg.appendChild(p);
-            }
-        }
-
-        function toggleAudio() {
-            const btn = document.getElementById('audio-btn');
-            if (state.isAudioPlaying) {
-                state.audioContext.close();
-                state.isAudioPlaying = false;
-                btn.classList.remove('active');
-            } else {
-                state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const freq = [164.81, 207.65, 246.94]; 
-                freq.forEach(f => {
-                    const osc = state.audioContext.createOscillator();
-                    const gain = state.audioContext.createGain();
-                    osc.type = 'triangle'; osc.frequency.value = f;
-                    const lfo = state.audioContext.createOscillator();
-                    lfo.type = 'sine'; lfo.frequency.value = 0.1 + Math.random() * 0.1;
-                    const lfoGain = state.audioContext.createGain();
-                    lfoGain.gain.value = 0.02;
-                    osc.connect(gain); lfo.connect(lfoGain); lfoGain.connect(gain.gain);
-                    gain.connect(state.audioContext.destination); gain.gain.value = 0.03; 
-                    osc.start(); lfo.start();
+                state.ebenezers.forEach(care => {
+                    const stone = document.createElement('div');
+                    stone.className = 'stone';
+                    // Organic shape logic
+                    const r = () => Math.floor(Math.random() * 40) + 30; // 30-70%
+                    stone.style.borderRadius = `${r()}% ${r()}% ${r()}% ${r()}% / ${r()}% ${r()}% ${r()}% ${r()}%`;
+                    stone.textContent = care.date.split(',')[0]; 
+                    stone.title = care.text;
+                    stone.onclick = () => alert(`On ${care.date}, you released:\n\n"${care.text}"`);
+                    grid.appendChild(stone);
                 });
-                state.isAudioPlaying = true;
-                btn.classList.add('active');
             }
         }
+        function closeGarden() { document.getElementById('garden-overlay').classList.remove('active-overlay'); }
+
+        function releaseCare() {
+            const input = document.getElementById('care-input');
+            const val = input.value.trim();
+            if(!val) return;
+            const newEbenezer = { text: val, date: new Date().toLocaleDateString() };
+            state.ebenezers.push(newEbenezer);
+            localStorage.setItem('dailyGrace_ebenezers', JSON.stringify(state.ebenezers));
+            const floater = document.createElement('div');
+            floater.textContent = val; floater.className = 'smoke-text';
+            const rect = input.getBoundingClientRect();
+            floater.style.left = rect.left + 'px'; floater.style.top = rect.top + 'px'; floater.style.width = rect.width + 'px'; floater.style.textAlign = 'center';
+            document.getElementById('cares-overlay').appendChild(floater);
+            input.value = "";
+            setTimeout(() => { document.getElementById('cares-feedback').style.opacity = '1'; if(navigator.vibrate) navigator.vibrate(50); }, 800);
+            setTimeout(() => floater.remove(), 3000);
+        }
+
+        // --- GEMINI LOGIC ---
+        async function callGemini(promptText) {
+            if(!apiKey) { alert("Please add your Gemini API Key in the Sidebar settings."); throw new Error("No API Key"); }
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = { contents: [{ parts: [{ text: promptText }] }] };
+            try {
+                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            } catch (error) { console.error("Gemini Error:", error); throw error; }
+        }
+
+        function openGenerator() { toggleSidebar(); document.getElementById('generator-overlay').classList.add('active-overlay'); document.getElementById('generator-input').focus(); }
+        function closeGenerator() { document.getElementById('generator-overlay').classList.remove('active-overlay'); document.getElementById('gen-feedback').style.opacity = '0'; }
+
+        async function generateDevotional() {
+            const input = document.getElementById('generator-input');
+            const topic = input.value.trim();
+            if (!topic) return;
+            const btnText = document.getElementById('gen-btn-text');
+            const feedback = document.getElementById('gen-feedback');
+            btnText.innerHTML = '<span class="spinner"></span> Creating...';
+            feedback.style.opacity = '1';
+            const prompt = `You are a gentle, wise Christian spiritual director. Create a short devotional about "${topic}". Format as JSON: "title", "scripture" (text only), "ref", "reflection" (2-3 sentences), "prompt", "prayerLines" (array 4 strings), "breathPhrases" (array 2 strings). Tone: Calming, orthodox.`;
+            try {
+                const resultText = await callGemini(prompt);
+                const cleanJson = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
+                const data = JSON.parse(cleanJson);
+                const newId = Date.now();
+                const newDevo = { id: newId, tags: ['Generated'], colors: ['#4C1D95', '#5B21B6', '#7C3AED'], date: "Personal Word", ...data };
+                DEVOTIONALS.unshift(newDevo);
+                closeGenerator();
+                renderFeed();
+                document.getElementById('feed').scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (error) { feedback.textContent = "Connection error."; feedback.style.color = "#ef4444"; } finally { btnText.textContent = "Generate ✨"; input.value = ""; }
+        }
+
+        async function deepenContext(id, btn) {
+            const data = DEVOTIONALS.find(d => d.id === id);
+            const contentDiv = document.getElementById(`deepen-content-${id}`);
+            const reflectionBox = document.getElementById(`ref-${id}`);
+            if(reflectionBox.style.display === 'none') { document.getElementById(`btn-ref-${id}`).style.display = 'none'; reflectionBox.style.display = 'block'; }
+            btn.innerHTML = '<span class="spinner"></span>';
+            contentDiv.style.display = 'block';
+            contentDiv.innerHTML = '<span style="color:#A78BFA;">Consulting...</span>';
+            const prompt = `Provide 2 sentences max context or Greek/Hebrew insight for: "${data.scripture}" (${data.ref}). Start with "🔍 Context:"`;
+            try { const text = await callGemini(prompt); contentDiv.innerHTML = `<p style="color:#E9D5FF; font-size:0.95rem;">${text}</p>`; btn.style.display = 'none'; } 
+            catch (e) { contentDiv.innerHTML = 'Error.'; btn.innerHTML = 'Deepen 🔍'; }
+        }
+
+        // --- SHARED UTILS ---
+        function startLectioMode(id) {
+            const data = DEVOTIONALS.find(d => d.id === id); const container = document.getElementById(`scripture-box-${id}`); const textEl = container.querySelector('.scripture-text'); textEl.innerHTML = ""; textEl.classList.remove('held'); 
+            const words = data.scripture.split(" "); let i = 0;
+            function typeWord() { if(i < words.length) { const span = document.createElement("span"); span.textContent = words[i] + " "; span.style.opacity = "0"; span.style.transition = "opacity 0.5s ease"; textEl.appendChild(span); requestAnimationFrame(() => span.style.opacity = "1"); i++; setTimeout(typeWord, 600); } else { const isHeld = state.heldWords.find(w => w.id === id); if(isHeld) textEl.classList.add('held'); } } typeWord();
+        }
+        function startBreathPrayer(id) {
+            const data = DEVOTIONALS.find(d => d.id === id); const phases = data.breathPhrases || ["Inhale Grace", "Exhale Worry"];
+            const overlay = document.getElementById('breath-prayer-overlay'); const textEl = document.getElementById('breath-text'); const circle = document.getElementById('breath-circle'); const instr = document.getElementById('breath-instruction');
+            overlay.classList.add('active-overlay');
+            let phase = 0; 
+            function runCycle() { if(!overlay.classList.contains('active-overlay')) return; if(phase === 0) { textEl.style.opacity = 0; setTimeout(() => { textEl.textContent = phases[0]; textEl.style.opacity = 1; }, 500); circle.style.transform = "scale(1.5)"; circle.style.opacity = "0.8"; instr.textContent = "Inhale (4s)"; phase = 1; state.breathInterval = setTimeout(runCycle, 4000); } else { textEl.style.opacity = 0; setTimeout(() => { textEl.textContent = phases[1]; textEl.style.opacity = 1; }, 500); circle.style.transform = "scale(1)"; circle.style.opacity = "0.3"; instr.textContent = "Exhale (6s)"; phase = 0; state.breathInterval = setTimeout(runCycle, 6000); } } runCycle();
+        }
+        function stopBreathPrayer() { document.getElementById('breath-prayer-overlay').classList.remove('active-overlay'); clearTimeout(state.breathInterval); }
+        function generateShareImage(id) {
+            const data = DEVOTIONALS.find(d => d.id === id); const canvas = document.getElementById('share-canvas'); const ctx = canvas.getContext('2d'); const overlay = document.getElementById('share-overlay'); const width = 1080; const height = 1350; canvas.width = width; canvas.height = height; const grd = ctx.createLinearGradient(0, 0, width, height); grd.addColorStop(0, data.colors[0]); grd.addColorStop(0.5, data.colors[1]); grd.addColorStop(1, data.colors[2]); ctx.fillStyle = grd; ctx.fillRect(0, 0, width, height); ctx.strokeStyle = "rgba(255,255,255,0.1)"; ctx.lineWidth = 4; ctx.strokeRect(40, 40, width-80, height-80); ctx.fillStyle = '#F7FAFC'; ctx.textAlign = 'center'; ctx.font = '60px Cinzel'; ctx.fillText(data.title.toUpperCase(), width/2, 200); ctx.font = 'italic 50px Cinzel'; wrapText(ctx, '"' + data.scripture + '"', width/2, 400, 800, 80); ctx.fillStyle = '#D4AF37'; ctx.font = '36px Lato'; ctx.fillText(data.ref, width/2, 1000); ctx.fillStyle = '#A0AEC0'; ctx.font = '30px Lato'; ctx.fillText("DAILY GRACE SANCTUARY", width/2, height - 100); overlay.classList.add('active-overlay'); const link = document.getElementById('download-link'); link.href = canvas.toDataURL("image/png"); link.download = `daily-grace-${data.date}.png`;
+        }
+        function wrapText(context, text, x, y, maxWidth, lineHeight) { const words = text.split(' '); let line = ''; for(let n = 0; n < words.length; n++) { const testLine = line + words[n] + ' '; const metrics = context.measureText(testLine); if (metrics.width > maxWidth && n > 0) { context.fillText(line, x, y); line = words[n] + ' '; y += lineHeight; } else { line = testLine; } } context.fillText(line, x, y); return y + lineHeight; }
+        function closeShare() { document.getElementById('share-overlay').classList.remove('active-overlay'); }
+        function openCaresRitual() { toggleSidebar(); document.getElementById('cares-overlay').classList.add('active-overlay'); document.getElementById('care-input').focus(); }
+        function closeCaresRitual() { document.getElementById('cares-overlay').classList.remove('active-overlay'); document.getElementById('care-input').value = ""; document.getElementById('cares-feedback').style.opacity = '0'; }
+        function revealReflection(id) { document.getElementById(`btn-ref-${id}`).style.display = 'none'; document.getElementById(`ref-${id}`).style.display = 'block'; }
+        function revealJournal(btn, id) { btn.style.display = 'none'; document.getElementById(`journal-${id}`).style.display = 'block'; }
+        function saveJournal(id) { const text = document.getElementById(`note-${id}`).value; state.savedNotes[id] = text; localStorage.setItem('dailyGrace_notes', JSON.stringify(state.savedNotes)); const btn = document.querySelector(`#journal-${id} .secondary`); btn.textContent = "Saved"; setTimeout(() => btn.textContent = "Save Note", 2000); }
+        function revealPrayer(btn, id, fromJournal = false) { if(fromJournal) { document.getElementById(`journal-${id}`).style.display = 'none'; } else { btn.style.display = 'none'; } const box = document.getElementById(`prayer-${id}`); const data = DEVOTIONALS.find(d => d.id === id); box.style.display = 'block'; if(box.querySelectorAll('.prayer-line').length === 0) { data.prayerLines.forEach((line, index) => { const p = document.createElement('p'); p.className = 'prayer-line'; p.textContent = line; p.style.animationDelay = `${index * 1.5}s`; box.insertBefore(p, box.firstChild); }); } }
+        function triggerEcho(btn) { const ripple = document.createElement('div'); ripple.className = 'ripple'; btn.parentElement.appendChild(ripple); if(navigator.vibrate) navigator.vibrate([50, 50, 50]); setTimeout(() => ripple.remove(), 1000); }
+        function setupObserver() { const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('active'); const colors = JSON.parse(entry.target.dataset.colors); document.documentElement.style.setProperty('--atm-1', colors[0]); document.documentElement.style.setProperty('--atm-2', colors[1]); document.documentElement.style.setProperty('--atm-3', colors[2]); document.documentElement.style.setProperty('--card-glow', colors[1].replace(')', ', 0.15)').replace('rgb', 'rgba')); } }); }, { threshold: 0.5 }); document.querySelectorAll('.slide').forEach(slide => observer.observe(slide)); }
+        function startSilence() { document.getElementById('silence-overlay').classList.add('active-overlay'); let timeLeft = 60; const display = document.getElementById('timer-display'); display.textContent = "01:00"; if(state.silenceInterval) clearInterval(state.silenceInterval); state.silenceInterval = setInterval(() => { timeLeft--; const m = Math.floor(timeLeft / 60); const s = timeLeft % 60; display.textContent = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`; if (timeLeft <= 0) { clearInterval(state.silenceInterval); display.textContent = "Amen."; } }, 1000); }
+        function stopSilence() { document.getElementById('silence-overlay').classList.remove('active-overlay'); if(state.silenceInterval) clearInterval(state.silenceInterval); }
+        function toggleSabbath() { document.body.classList.toggle('sabbath-mode'); document.getElementById('sabbath-toggle').classList.toggle('active'); }
+        function toggleHold(id, container) { const textEl = container.querySelector('.scripture-text'); const data = DEVOTIONALS.find(d => d.id === id); const index = state.heldWords.findIndex(w => w.id === id); if (index === -1) { state.heldWords.push({ id: data.id, text: data.scripture, ref: data.ref }); textEl.classList.add('held'); } else { state.heldWords.splice(index, 1); textEl.classList.remove('held'); } localStorage.setItem('dailyGrace_held', JSON.stringify(state.heldWords)); renderHeldWords(); }
+        function renderHeldWords() { const list = document.getElementById('held-list'); if (state.heldWords.length === 0) { list.innerHTML = '<p style="font-size: 0.8rem; color: #555;">Double-tap verse text to hold...</p>'; return; } list.innerHTML = ''; state.heldWords.forEach(item => { const div = document.createElement('div'); div.innerHTML = `<p style="font-size:0.9rem; color:#ddd; font-style:italic; margin-bottom:5px;">"${item.text.substring(0, 50)}..."</p><span style="font-size:0.75rem; color:var(--text-dim);">${item.ref}</span>`; div.style.marginBottom = '20px'; list.appendChild(div); }); }
+        function toggleBreath() { state.breathEnabled = !state.breathEnabled; document.getElementById('breath-toggle').classList.toggle('active'); document.querySelectorAll('.scripture-container').forEach(el => { if (state.breathEnabled) el.classList.add('breathe-active'); else el.classList.remove('breathe-active'); }); }
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
+        function createParticles() { const bg = document.getElementById('bg-layer'); for(let i=0; i<20; i++) { const p = document.createElement('div'); p.className = 'particle'; const size = Math.random() * 4 + 1; p.style.width = `${size}px`; p.style.height = `${size}px`; p.style.left = `${Math.random() * 100}%`; p.style.animationDuration = `${Math.random() * 15 + 10}s`; p.style.animationDelay = `${Math.random() * 5}s`; bg.appendChild(p); } }
+        function toggleAudio() { const btn = document.getElementById('audio-btn'); if (state.isAudioPlaying) { state.audioContext.close(); state.isAudioPlaying = false; btn.classList.remove('active'); } else { state.audioContext = new (window.AudioContext || window.webkitAudioContext)(); const freq = [164.81, 207.65, 246.94]; freq.forEach(f => { const osc = state.audioContext.createOscillator(); const gain = state.audioContext.createGain(); osc.type = 'triangle'; osc.frequency.value = f; const lfo = state.audioContext.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.1 + Math.random() * 0.1; const lfoGain = state.audioContext.createGain(); lfoGain.gain.value = 0.02; osc.connect(gain); lfo.connect(lfoGain); lfoGain.connect(gain.gain); gain.connect(state.audioContext.destination); gain.gain.value = 0.03; osc.start(); lfo.start(); }); state.isAudioPlaying = true; btn.classList.add('active'); } }
+        function saveApiKey(key) { if(key.trim()) { state.userApiKey = key.trim(); apiKey = key.trim(); localStorage.setItem('dailyGrace_apiKey', key.trim()); const msg = document.getElementById('key-saved-msg'); msg.style.opacity = '1'; setTimeout(() => msg.style.opacity = '0', 2000); } }
+        function incrementGrace() { if(!sessionStorage.getItem('visit_logged')) { state.graceCount++; localStorage.setItem('dailyGrace_visits', state.graceCount); sessionStorage.setItem('visit_logged', 'true'); } document.getElementById('grace-counter').textContent = state.graceCount; }
+        function checkTimeAndSeason() { const now = new Date(); const hour = now.getHours(); if (hour >= 21 || hour < 4) { state.isCompline = true; document.getElementById('gate-layer').classList.add('hidden-gate'); const compline = document.getElementById('compline-gate'); compline.classList.remove('hidden-gate'); compline.style.opacity = '1'; compline.style.visibility = 'visible'; } const season = getLiturgicalSeason(now); document.getElementById('liturgical-badge').textContent = season; }
+        function getLiturgicalSeason(now) { const year = now.getFullYear(); const month = now.getMonth(); const day = now.getDate(); if (month === 0 && day <= 5) return "Christmas Season"; if (month === 0 && day === 6) return "Epiphany"; if (month === 11 && day >= 25) return "Christmas Season"; if (month === 11 && day < 25) return "Advent"; const a = year % 19, b = Math.floor(year / 100), c = year % 100; const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25); const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30; const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7; const m = Math.floor((a + 11 * h + 22 * l) / 451); const easterMonth = Math.floor((h + l - 7 * m + 114) / 31) - 1; const easterDay = ((h + l - 7 * m + 114) % 31) + 1; const easterDate = new Date(year, easterMonth, easterDay); const lentStart = new Date(easterDate); lentStart.setDate(easterDate.getDate() - 46); const pentecost = new Date(easterDate); pentecost.setDate(easterDate.getDate() + 49); if (now >= lentStart && now < easterDate) return "Lent"; if (now >= easterDate && now <= pentecost) return "Eastertide"; return "Ordinary Time"; }
+        function enterApp(selectedMood) { state.mood = selectedMood; DEVOTIONALS.sort((a, b) => { const aMatch = a.tags.includes(selectedMood); const bMatch = b.tags.includes(selectedMood); return bMatch - aMatch; }); renderFeed(); const activeGate = state.isCompline ? document.getElementById('compline-gate') : document.getElementById('gate-layer'); activeGate.style.opacity = '0'; setTimeout(() => { activeGate.classList.add('hidden-gate'); activeGate.style.visibility = 'hidden'; setupObserver(); }, 1500); }
     </script>
 </body>
 </html>
