@@ -38,7 +38,7 @@
             overflow: hidden;
             height: 100vh;
             width: 100vw;
-            transition: background 1.5s ease; /* Smooth atmosphere transition */
+            transition: background 1.5s ease;
         }
 
         /* --- SABBATH MODE --- */
@@ -46,7 +46,9 @@
         body.sabbath-mode .date-badge,
         body.sabbath-mode .scripture-ref,
         body.sabbath-mode .sidebar-btn,
-        body.sabbath-mode .journal-toggle {
+        body.sabbath-mode .journal-toggle,
+        body.sabbath-mode .top-bar,
+        body.sabbath-mode .ai-btn {
             display: none !important;
         }
         
@@ -69,7 +71,7 @@
             z-index: -10;
             background: linear-gradient(135deg, var(--atm-1) 0%, var(--atm-2) 50%, var(--atm-3) 100%);
             background-size: 200% 200%;
-            transition: background 1.5s ease; /* Critical for the shift effect */
+            transition: background 1.5s ease;
             animation: gradientShift 20s ease infinite;
         }
 
@@ -97,8 +99,8 @@
 
         /* --- UI LAYERS --- */
         
-        /* 1. THE GATE (Intro) */
-        #gate-layer {
+        /* 1. THE GATE */
+        #gate-layer, #compline-gate {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: 100;
@@ -110,7 +112,7 @@
             transition: opacity 1.5s ease, visibility 1.5s;
         }
         
-        #gate-layer.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .hidden-gate { opacity: 0; visibility: hidden; pointer-events: none; }
 
         .gate-question {
             font-family: var(--font-display);
@@ -118,6 +120,8 @@
             margin-bottom: 40px;
             opacity: 0;
             animation: fadeIn 2s ease forwards;
+            text-align: center;
+            padding: 0 20px;
         }
 
         .mood-grid {
@@ -143,7 +147,68 @@
         }
         .mood-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(212, 175, 55, 0.05); }
 
-        /* 2. MAIN FEED */
+        /* 2. OVERLAYS */
+        #cares-overlay, #generator-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 18, 22, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease;
+        }
+        #cares-overlay.active, #generator-overlay.active { opacity: 1; visibility: visible; }
+
+        .cares-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--text-dim);
+            color: var(--text-light);
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            text-align: center;
+            width: 80%;
+            max-width: 500px;
+            padding: 10px;
+            margin-bottom: 30px;
+        }
+        .cares-input:focus { outline: none; border-color: var(--accent); }
+
+        .smoke-text {
+            position: absolute;
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            color: var(--text-dim);
+            pointer-events: none;
+            animation: dissipate 3s ease-out forwards;
+        }
+        @keyframes dissipate {
+            0% { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
+            100% { transform: translateY(-100px) scale(1.5); opacity: 0; filter: blur(10px); }
+        }
+
+        /* 3. SHARE OVERLAY */
+        #share-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 250;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s;
+        }
+        #share-overlay.active { opacity: 1; visibility: visible; }
+        
+        canvas {
+            max-width: 90%; max-height: 60vh;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* 4. MAIN FEED */
         .snap-container {
             height: 100vh;
             overflow-y: scroll;
@@ -179,16 +244,13 @@
             display: flex;
             flex-direction: column;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            /* Hide scrollbar within card */
             scrollbar-width: none; 
         }
         .content-card::-webkit-scrollbar { display: none; }
-        /* Allow card internal scroll if content is long */
         .content-card { overflow-y: auto; } 
 
         .slide.active .content-card { opacity: 1; transform: translateY(0); }
 
-        /* Scripture Styles */
         .scripture-container {
             margin: 20px 0;
             position: relative;
@@ -208,7 +270,6 @@
         }
 
         .breathe-active .scripture-text { animation: breathe 8s ease-in-out infinite; }
-
         @keyframes breathe {
             0%, 100% { opacity: 0.85; transform: scale(1); }
             50% { opacity: 1; transform: scale(1.02); text-shadow: 0 0 20px rgba(255,255,255,0.1); }
@@ -222,107 +283,42 @@
         }
 
         .hold-hint {
-            font-size: 0.7rem;
-            color: var(--text-dim);
-            opacity: 0;
-            transition: opacity 0.3s;
-            margin-top: 8px;
-            font-style: italic;
+            font-size: 0.7rem; color: var(--text-dim); opacity: 0; transition: opacity 0.3s; margin-top: 8px; font-style: italic;
         }
         .scripture-container:hover .hold-hint { opacity: 0.6; }
 
         .scripture-ref {
-            font-size: 0.8rem;
-            color: var(--accent);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            display: block;
-            margin-top: 15px;
-            margin-bottom: 20px;
+            font-size: 0.8rem; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; display: block; margin-top: 15px; margin-bottom: 20px;
         }
 
         /* --- INTERACTION LAYERS --- */
-        .interaction-layer {
-            margin-top: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+        .interaction-layer { margin-top: 10px; display: flex; flex-direction: column; align-items: center; }
 
-        /* Reflection & Prayer Boxes */
-        .reflection-box, .prayer-box, .journal-box {
-            text-align: left;
-            font-size: 1rem;
-            color: #E2E8F0;
-            line-height: 1.7;
-            border-top: 1px solid var(--glass-border);
-            padding-top: 20px;
-            margin-bottom: 20px;
-            display: none;
-            width: 100%;
-            animation: fadeIn 0.8s forwards;
+        .reflection-box, .prayer-box, .journal-box, .deepen-box {
+            text-align: left; font-size: 1rem; color: #E2E8F0; line-height: 1.7; border-top: 1px solid var(--glass-border); padding-top: 20px; margin-bottom: 20px; display: none; width: 100%; animation: fadeIn 0.8s forwards;
         }
 
         .prayer-line {
-            font-family: var(--font-body);
-            font-size: 1rem;
-            color: #E2E8F0;
-            margin-bottom: 12px;
-            opacity: 0;
-            transform: translateY(10px);
-            animation: fadeUpLine 1s forwards;
-            line-height: 1.6;
+            font-family: var(--font-body); font-size: 1rem; color: #E2E8F0; margin-bottom: 12px; opacity: 0; transform: translateY(10px); animation: fadeUpLine 1s forwards; line-height: 1.6;
         }
 
-        /* Action Buttons */
         .action-btn {
-            background: none;
-            border: 1px solid var(--text-dim);
-            color: var(--text-dim);
-            padding: 10px 24px;
-            border-radius: 50px;
-            margin: 10px 0;
-            cursor: pointer;
-            font-size: 0.85rem;
-            letter-spacing: 1px;
-            transition: all 0.3s;
-            text-transform: uppercase;
+            background: none; border: 1px solid var(--text-dim); color: var(--text-dim); padding: 10px 24px; border-radius: 50px; margin: 10px 0; cursor: pointer; font-size: 0.85rem; letter-spacing: 1px; transition: all 0.3s; text-transform: uppercase;
         }
         .action-btn:hover { border-color: var(--accent); color: var(--accent); }
         .action-btn.secondary { font-size: 0.75rem; border: none; opacity: 0.7; }
+        .action-btn.icon-only { padding: 10px; border-radius: 50%; }
+        .action-btn.magic { border-color: #8B5CF6; color: #A78BFA; }
 
-        /* Journaling Specifics */
         .journal-box textarea {
-            width: 100%;
-            background: rgba(0,0,0,0.2);
-            border: 1px solid var(--glass-border);
-            color: var(--text-light);
-            padding: 15px;
-            border-radius: 8px;
-            font-family: var(--font-body);
-            margin-bottom: 10px;
-            resize: vertical;
-            min-height: 100px;
+            width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-light); padding: 15px; border-radius: 8px; font-family: var(--font-body); margin-bottom: 10px; resize: vertical; min-height: 100px;
         }
         .journal-box textarea:focus { outline: none; border-color: var(--accent); }
-        .journal-prompt {
-            font-family: var(--font-display);
-            color: var(--accent);
-            margin-bottom: 10px;
-            font-size: 1.1rem;
-        }
+        .journal-prompt { font-family: var(--font-display); color: var(--accent); margin-bottom: 10px; font-size: 1.1rem; }
 
-        /* Amen Ripple Effect */
         .amen-btn-container { position: relative; display: inline-block; }
         .ripple {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px; height: 20px;
-            border-radius: 50%;
-            border: 2px solid var(--accent);
-            animation: rippleEffect 1s linear forwards;
-            opacity: 0;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--accent); animation: rippleEffect 1s linear forwards; opacity: 0;
         }
         @keyframes rippleEffect {
             0% { width: 0; height: 0; opacity: 0.8; }
@@ -330,93 +326,37 @@
         }
 
         /* --- SIDEBAR --- */
-        .top-bar {
-            position: fixed;
-            top: 0; left: 0; width: 100%;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            z-index: 50;
-            pointer-events: none;
-        }
-        .top-btn {
-            pointer-events: auto;
-            background: none;
-            border: none;
-            color: var(--text-dim);
-            cursor: pointer;
-            transition: color 0.3s;
-        }
+        .top-bar { position: fixed; top: 0; left: 0; width: 100%; padding: 20px; display: flex; justify-content: space-between; z-index: 50; pointer-events: none; }
+        .top-btn { pointer-events: auto; background: none; border: none; color: var(--text-dim); cursor: pointer; transition: color 0.3s; }
         .top-btn:hover, .top-btn.active { color: var(--accent); }
         .top-btn svg { width: 24px; height: 24px; fill: currentColor; }
 
         .sidebar {
-            position: fixed;
-            top: 0; left: 0; height: 100%;
-            width: 300px;
-            background: #111;
-            z-index: 60;
-            transform: translateX(-100%);
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            padding: 80px 30px 30px 30px;
-            border-right: 1px solid var(--glass-border);
-            overflow-y: auto;
+            position: fixed; top: 0; left: 0; height: 100%; width: 300px; background: #111; z-index: 60; transform: translateX(-100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 80px 30px 30px 30px; border-right: 1px solid var(--glass-border); overflow-y: auto;
         }
         .sidebar.open { transform: translateX(0); }
         
-        .overlay-mask {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 55;
-            opacity: 0;
-            visibility: hidden;
-            transition: 0.3s;
-        }
+        .overlay-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 55; opacity: 0; visibility: hidden; transition: 0.3s; }
         .overlay-mask.active { opacity: 1; visibility: visible; }
 
         /* --- SILENCE TIMER --- */
-        #silence-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #0f1216;
-            z-index: 200;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 1s ease;
-        }
+        #silence-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f1216; z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 1s ease; }
         #silence-overlay.active { opacity: 1; visibility: visible; }
 
-        .breathing-circle {
-            width: 100px; height: 100px;
-            border-radius: 50%;
-            border: 1px solid var(--text-dim);
-            animation: breathe-circle 6s ease-in-out infinite;
-            margin-bottom: 30px;
-        }
+        .breathing-circle { width: 100px; height: 100px; border-radius: 50%; border: 1px solid var(--text-dim); animation: breathe-circle 6s ease-in-out infinite; margin-bottom: 30px; }
         @keyframes breathe-circle {
             0%, 100% { transform: scale(1); opacity: 0.3; }
             50% { transform: scale(1.5); opacity: 0.8; border-color: var(--accent); }
         }
 
+        .spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
         /* --- UTILS --- */
-        .toggle-switch {
-            width: 40px; height: 20px;
-            background: #333;
-            border-radius: 20px;
-            position: relative;
-            cursor: pointer;
-        }
-        .toggle-switch::after {
-            content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: 0.3s;
-        }
+        .toggle-switch { width: 40px; height: 20px; background: #333; border-radius: 20px; position: relative; cursor: pointer; }
+        .toggle-switch::after { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: 0.3s; }
         .toggle-switch.active { background: var(--accent); }
         .toggle-switch.active::after { transform: translateX(20px); }
-        
         .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.9rem; color: var(--text-dim); }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -445,8 +385,28 @@
     <!-- UI LAYER: SIDEBAR -->
     <div class="overlay-mask" id="overlay" onclick="toggleSidebar()"></div>
     <aside class="sidebar" id="sidebar">
-        <h2 style="font-family:var(--font-display); color:var(--accent); margin-bottom:20px;">Sanctuary</h2>
-        <div style="font-size:0.8rem; color:#666; margin-bottom:30px;">Daily Grace v7.0</div>
+        <h2 style="font-family:var(--font-display); color:var(--accent); margin-bottom:5px;">Sanctuary</h2>
+        <div style="font-size:0.8rem; color:#666; margin-bottom:5px;">Daily Grace v12.0</div>
+        
+        <!-- Liturgical Season Badge -->
+        <div id="liturgical-badge" style="font-size:0.7rem; color:var(--accent); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; border:1px solid var(--glass-border); display:inline-block; padding:4px 8px; border-radius:4px;">
+            Ordinary Time
+        </div>
+
+        <!-- Grace Jar -->
+        <div style="font-size:0.8rem; color:var(--text-dim); margin-bottom:30px;">
+            Moments of Grace: <span id="grace-counter" style="color:var(--text-light); font-weight:bold;">0</span>
+        </div>
+        
+        <!-- GEMINI GENERATOR BUTTON -->
+        <button class="action-btn ai-btn" onclick="openGenerator()" style="width:100%; margin-bottom:15px; border-color:#8B5CF6; color:#A78BFA; box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);">
+            ✨ Receive Personal Word
+        </button>
+
+        <!-- RITUAL BUTTON -->
+        <button class="action-btn" onclick="openCaresRitual()" style="width:100%; margin-bottom:30px; border-color:var(--accent); color:var(--accent);">
+            Ritual: Cast Cares
+        </button>
 
         <div style="margin-bottom:10px; font-weight:bold; color:#ddd;">Words I'm Holding</div>
         <div id="held-list" style="margin-bottom:30px;">
@@ -454,6 +414,16 @@
         </div>
 
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--glass-border);">
+            
+            <!-- API KEY INPUT -->
+            <div class="setting-item" style="flex-direction:column; align-items:flex-start; gap:10px;">
+                <span>Gemini API Key</span>
+                <input type="password" id="api-key-input" placeholder="Paste API Key here..." 
+                       style="width:100%; background:rgba(255,255,255,0.1); border:1px solid var(--glass-border); padding:8px; border-radius:4px; color:var(--text-light); font-size:0.8rem;"
+                       onchange="saveApiKey(this.value)">
+                <span id="key-saved-msg" style="font-size:0.7rem; color:var(--accent); opacity:0; transition:opacity 0.3s;">Key Saved</span>
+            </div>
+
             <div class="setting-item">
                 <span>Breath Sync</span>
                 <div class="toggle-switch active" id="breath-toggle" onclick="toggleBreath()"></div>
@@ -465,6 +435,41 @@
         </div>
     </aside>
 
+    <!-- UI LAYER: GENERATOR OVERLAY (GEMINI) -->
+    <div id="generator-overlay">
+        <h2 style="font-family:var(--font-display); color:#A78BFA; margin-bottom:10px;">Receive a Word</h2>
+        <p style="color:var(--text-dim); margin-bottom:40px; font-size:0.9rem; text-align:center;">What is weighing on your heart today?<br>Let grace meet you there.</p>
+        <input type="text" id="generator-input" class="cares-input" placeholder="e.g. Loneliness, Confusion, Joy..." autocomplete="off">
+        <div style="display:flex; gap:20px;">
+            <button class="action-btn secondary" onclick="closeGenerator()">Cancel</button>
+            <button class="action-btn ai-btn" onclick="generateDevotional()" style="border-color:#8B5CF6; color:#A78BFA;">
+                <span id="gen-btn-text">Generate ✨</span>
+            </button>
+        </div>
+        <div id="gen-feedback" style="margin-top:20px; height:20px; color:var(--text-dim); font-size:0.8rem; opacity:0; transition:opacity 0.3s;">Listening...</div>
+    </div>
+
+    <!-- UI LAYER: CAST CARES OVERLAY -->
+    <div id="cares-overlay">
+        <h2 style="font-family:var(--font-display); color:var(--text-light); margin-bottom:10px;">Cast Your Cares</h2>
+        <p style="color:var(--text-dim); margin-bottom:40px; font-size:0.9rem;">"Cast all your anxiety on him because he cares for you."</p>
+        <input type="text" id="care-input" class="cares-input" placeholder="Name your burden..." autocomplete="off">
+        <div style="display:flex; gap:20px;">
+            <button class="action-btn secondary" onclick="closeCaresRitual()">Cancel</button>
+            <button class="action-btn" onclick="releaseCare()" style="border-color:var(--accent); color:var(--accent);">Release</button>
+        </div>
+        <div id="cares-feedback" style="margin-top:20px; height:20px; color:var(--accent); font-size:0.9rem; opacity:0; transition:opacity 1s;">It is carried.</div>
+    </div>
+
+    <!-- UI LAYER: SHARE GENERATOR OVERLAY -->
+    <div id="share-overlay">
+        <canvas id="share-canvas"></canvas>
+        <div style="margin-top:20px; display:flex; gap:20px;">
+            <button class="action-btn secondary" onclick="closeShare()">Close</button>
+            <a id="download-link" class="action-btn" style="border-color:var(--accent); color:var(--accent); text-decoration:none;">Download Card</a>
+        </div>
+    </div>
+
     <!-- UI LAYER: SILENCE TIMER -->
     <div id="silence-overlay">
         <div class="breathing-circle"></div>
@@ -473,7 +478,7 @@
         <button class="action-btn secondary" onclick="stopSilence()" style="margin-top:30px;">Return</button>
     </div>
 
-    <!-- UI LAYER: GATE (Intro) -->
+    <!-- UI LAYER: DAY GATE -->
     <section id="gate-layer">
         <div class="gate-content">
             <h1 class="gate-question">How is your heart today?</h1>
@@ -486,6 +491,20 @@
         </div>
     </section>
 
+    <!-- UI LAYER: COMPLINE GATE -->
+    <section id="compline-gate" class="hidden-gate">
+        <div class="gate-content">
+            <h1 class="gate-question" style="color:var(--accent);">The day is done.</h1>
+            <p style="text-align:center; color:var(--text-dim); margin-bottom:30px; max-width:400px; line-height:1.6;">
+                Return to your rest, my soul,<br>for the Lord has been good to you.
+            </p>
+            <div class="mood-grid">
+                <button class="mood-btn" onclick="enterApp('Peace')">Find Peace</button>
+                <button class="mood-btn" onclick="enterApp('Night')">Review Day</button>
+            </div>
+        </div>
+    </section>
+
     <!-- UI LAYER: MAIN FEED -->
     <main class="snap-container" id="feed">
         <!-- Slides Injected Here -->
@@ -493,13 +512,18 @@
 
     <script>
         // ============================
+        //  GEMINI API CONFIG
+        // ============================
+        let apiKey = ""; // Will be populated by user input
+        
+        // ============================
         //  DATA
         // ============================
-        const DEVOTIONALS = [
+        let DEVOTIONALS = [
             {
                 id: 1,
-                tags: ['Anxious', 'Weary'],
-                colors: ['#0f1216', '#2d3748', '#1a202c'], // Cool deep blues
+                tags: ['Anxious', 'Weary', 'Night'],
+                colors: ['#0f1216', '#2d3748', '#1a202c'],
                 date: "Today",
                 title: "Be Still",
                 scripture: "He says, 'Be still, and know that I am God; I will be exalted among the nations, I will be exalted in the earth.'",
@@ -510,8 +534,8 @@
             },
             {
                 id: 2,
-                tags: ['Weary', 'Hopeful'],
-                colors: ['#1C1917', '#44403C', '#292524'], // Warm Stone/Sepia
+                tags: ['Weary', 'Hopeful', 'Night', 'Peace'],
+                colors: ['#1C1917', '#44403C', '#292524'],
                 date: "Yesterday",
                 title: "Come to Me",
                 scripture: "Come to me, all you who are weary and burdened, and I will give you rest. Take my yoke upon you and learn from me.",
@@ -523,7 +547,7 @@
             {
                 id: 3,
                 tags: ['Grateful', 'Hopeful'],
-                colors: ['#1e1b4b', '#312e81', '#4338ca'], // Indigo/Sunrise
+                colors: ['#1e1b4b', '#312e81', '#4338ca'],
                 date: "Jan 1",
                 title: "New Mercies",
                 scripture: "Because of the Lord’s great love we are not consumed, for his compassions never fail. They are new every morning.",
@@ -534,8 +558,8 @@
             },
             {
                 id: 4,
-                tags: ['Anxious'],
-                colors: ['#111827', '#1F2937', '#374151'], // Deep Gray/Slate
+                tags: ['Anxious', 'Peace'],
+                colors: ['#111827', '#1F2937', '#374151'],
                 date: "Wisdom",
                 title: "Peace I Leave",
                 scripture: "Peace I leave with you; my peace I give you. I do not give to you as the world gives. Do not let your hearts be troubled.",
@@ -543,6 +567,18 @@
                 reflection: "This peace is not a feeling; it is a person. It is a guard standing watch over the door of your heart.",
                 prompt: "Where do you feel 'trouble' in your body? Breathe peace into that spot.",
                 prayerLines: ["Prince of Peace,", "Quiet the storm.", "I accept Your gift.", "Guard my heart."]
+            },
+            {
+                id: 5,
+                tags: ['Night'],
+                colors: ['#020617', '#172554', '#1e1b4b'], /* Midnight Deep */
+                date: "Compline",
+                title: "Shadow of Wings",
+                scripture: "He will cover you with his feathers, and under his wings you will find refuge; his faithfulness will be your shield and rampart.",
+                ref: "Psalm 91:4",
+                reflection: "As the day ends, there is nothing left to achieve. The work is done. You are safe to shut your eyes, not because the world is safe, but because your Keeper is awake.",
+                prompt: "What moment today do you need to release before you sleep?",
+                prayerLines: ["Keeper of Israel,", "Watch over me as I sleep.", "I release my day to You.", "Wake me with mercy."]
             }
         ];
 
@@ -553,10 +589,13 @@
             mood: null,
             heldWords: JSON.parse(localStorage.getItem('dailyGrace_held')) || [],
             savedNotes: JSON.parse(localStorage.getItem('dailyGrace_notes')) || {},
+            userApiKey: localStorage.getItem('dailyGrace_apiKey') || "", // Load from storage
+            graceCount: parseInt(localStorage.getItem('dailyGrace_visits')) || 0,
             audioContext: null,
             isAudioPlaying: false,
             breathEnabled: true,
-            silenceInterval: null
+            silenceInterval: null,
+            isCompline: false
         };
 
         // ============================
@@ -565,7 +604,100 @@
         document.addEventListener('DOMContentLoaded', () => {
             createParticles();
             renderHeldWords();
+            checkTimeAndSeason();
+            incrementGrace();
+            
+            // Populate input if key exists
+            if(state.userApiKey) {
+                document.getElementById('api-key-input').value = state.userApiKey;
+                apiKey = state.userApiKey;
+            }
         });
+
+        function saveApiKey(key) {
+            if(key.trim()) {
+                state.userApiKey = key.trim();
+                apiKey = key.trim();
+                localStorage.setItem('dailyGrace_apiKey', key.trim());
+                const msg = document.getElementById('key-saved-msg');
+                msg.style.opacity = '1';
+                setTimeout(() => msg.style.opacity = '0', 2000);
+            }
+        }
+
+        function incrementGrace() {
+            // Simple logic: one visit per session (or could check date)
+            if(!sessionStorage.getItem('visit_logged')) {
+                state.graceCount++;
+                localStorage.setItem('dailyGrace_visits', state.graceCount);
+                sessionStorage.setItem('visit_logged', 'true');
+            }
+            document.getElementById('grace-counter').textContent = state.graceCount;
+        }
+
+        function checkTimeAndSeason() {
+            const now = new Date();
+            const hour = now.getHours();
+            
+            // 1. Compline Check
+            if (hour >= 21 || hour < 4) {
+                state.isCompline = true;
+                document.getElementById('gate-layer').classList.add('hidden-gate');
+                const compline = document.getElementById('compline-gate');
+                compline.classList.remove('hidden-gate');
+                compline.style.opacity = '1';
+                compline.style.visibility = 'visible';
+            }
+
+            // 2. TRUE Liturgical Season (Computus Algorithm)
+            const season = getLiturgicalSeason(now);
+            document.getElementById('liturgical-badge').textContent = season;
+        }
+
+        function getLiturgicalSeason(now) {
+            const year = now.getFullYear();
+            const month = now.getMonth(); 
+            const day = now.getDate();
+            
+            // Fixed dates
+            if (month === 0 && day <= 5) return "Christmas Season"; 
+            if (month === 0 && day === 6) return "Epiphany";
+            if (month === 11 && day >= 25) return "Christmas Season";
+            
+            // Advent (Approx: 4 Sundays before Christmas)
+            if (month === 11 && day < 25) return "Advent"; // Simple proxy for now
+
+            // Easter Calculation (Meeus/Jones/Butcher)
+            const a = year % 19;
+            const b = Math.floor(year / 100);
+            const c = year % 100;
+            const d = Math.floor(b / 4);
+            const e = b % 4;
+            const f = Math.floor((b + 8) / 25);
+            const g = Math.floor((b - f + 1) / 3);
+            const h = (19 * a + b - d - g + 15) % 30;
+            const i = Math.floor(c / 4);
+            const k = c % 4;
+            const l = (32 + 2 * e + 2 * i - h - k) % 7;
+            const m = Math.floor((a + 11 * h + 22 * l) / 451);
+            const easterMonth = Math.floor((h + l - 7 * m + 114) / 31) - 1; 
+            const easterDay = ((h + l - 7 * m + 114) % 31) + 1;
+            
+            const easterDate = new Date(year, easterMonth, easterDay);
+            
+            // Lent: 46 days before Easter
+            const lentStart = new Date(easterDate);
+            lentStart.setDate(easterDate.getDate() - 46);
+            
+            // Pentecost: 50 days after Easter
+            const pentecost = new Date(easterDate);
+            pentecost.setDate(easterDate.getDate() + 49);
+
+            if (now >= lentStart && now < easterDate) return "Lent";
+            if (now >= easterDate && now <= pentecost) return "Eastertide";
+            
+            return "Ordinary Time";
+        }
 
         function enterApp(selectedMood) {
             state.mood = selectedMood;
@@ -580,11 +712,12 @@
             // Render
             renderFeed();
 
-            // Animate Gate
-            const gate = document.getElementById('gate-layer');
-            gate.style.opacity = '0';
+            // Animate Gate Away
+            const activeGate = state.isCompline ? document.getElementById('compline-gate') : document.getElementById('gate-layer');
+            activeGate.style.opacity = '0';
             setTimeout(() => {
-                gate.classList.add('hidden');
+                activeGate.classList.add('hidden-gate');
+                activeGate.style.visibility = 'hidden';
                 setupObserver(); 
             }, 1500);
         }
@@ -599,38 +732,52 @@
                 
                 const slide = document.createElement('section');
                 slide.className = 'slide';
-                slide.dataset.colors = JSON.stringify(data.colors); // Store colors for observer
-                
+                slide.dataset.colors = JSON.stringify(data.colors || ['#0f1216', '#2d3748', '#1a202c']); 
+                slide.id = `slide-${data.id}`;
+
                 slide.innerHTML = `
                     <div class="content-card">
-                        <span class="date-badge" style="color:var(--accent); font-size:0.75rem; letter-spacing:2px; margin-bottom:10px;">${data.date}</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <span class="date-badge" style="color:var(--accent); font-size:0.75rem; letter-spacing:2px;">${data.date}</span>
+                            <div style="display:flex; gap:10px;">
+                                <button class="action-btn icon-only" onclick="startLectioMode(${data.id})" title="Lectio Mode (Slow Read)">
+                                    <svg viewBox="0 0 24 24" style="width:16px; height:16px; fill:currentColor;"><path d="M6 2h12v6l-4 4 4 4v6H6v-6l4-4-4-4V2zm10 14.5V18H8v-1.5l4-4 4 4zm-4-5l-4-4V4h8v4.5l-4 4z"/></svg>
+                                </button>
+                                <button class="action-btn icon-only" onclick="generateShareImage(${data.id})" title="Create Sanctuary Card">
+                                    <svg viewBox="0 0 24 24" style="width:16px; height:16px; fill:currentColor;"><path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5 5-5 5z"/></svg>
+                                </button>
+                            </div>
+                        </div>
                         <h1 style="font-family:var(--font-display); font-size:2rem; margin-bottom:20px;">${data.title}</h1>
                         
-                        <div class="scripture-container ${state.breathEnabled ? 'breathe-active' : ''}" ondblclick="toggleHold(${data.id}, this)">
+                        <div class="scripture-container ${state.breathEnabled ? 'breathe-active' : ''}" ondblclick="toggleHold(${data.id}, this)" id="scripture-box-${data.id}">
                             <p class="scripture-text ${isHeld ? 'held' : ''}">${data.scripture}</p>
                             <div class="hold-hint">Double-tap to hold</div>
                         </div>
                         <span class="scripture-ref">${data.ref}</span>
 
-                        <!-- INTERACTION LAYERS -->
                         <div class="interaction-layer">
+                            <div style="display:flex; gap:10px; width:100%; justify-content:center;">
+                                <button class="action-btn" id="btn-ref-${data.id}" onclick="revealReflection(${data.id})">
+                                    Read Reflection
+                                </button>
+                                <button class="action-btn ai-btn" id="btn-deep-${data.id}" onclick="deepenContext(${data.id}, this)" title="Get context via Gemini" style="border-color:#8B5CF6; color:#A78BFA; display:none;">
+                                    Deepen 🔍
+                                </button>
+                            </div>
                             
-                            <!-- 1. Reflection -->
-                            <button class="action-btn" id="btn-ref-${data.id}" onclick="revealReflection(${data.id})">
-                                Read Reflection
-                            </button>
                             <div class="reflection-box" id="ref-${data.id}">
                                 <p>${data.reflection}</p>
+                                <!-- Deepen Content Area -->
+                                <div id="deepen-content-${data.id}" class="deepen-box" style="border-top:1px dashed #8B5CF6; margin-top:15px; padding-top:15px;"></div>
                                 
-                                <!-- 2. Journaling (Heart Notes) -->
                                 <button class="action-btn journal-toggle" onclick="revealJournal(this, ${data.id})" style="margin-top:20px; width:100%;">
                                     Open Heart Notes ${existingNote ? '✎' : ''}
                                 </button>
                             </div>
 
-                            <!-- Journal Content -->
                             <div class="journal-box" id="journal-${data.id}">
-                                <div class="journal-prompt">${data.prompt}</div>
+                                <div class="journal-prompt">${data.prompt || "Write what is on your heart..."}</div>
                                 <textarea id="note-${data.id}" placeholder="Type your heart here...">${existingNote}</textarea>
                                 <div style="display:flex; gap:10px;">
                                     <button class="action-btn secondary" onclick="saveJournal(${data.id})">Save Note</button>
@@ -640,9 +787,7 @@
                                 </div>
                             </div>
 
-                            <!-- 3. Prayer Content -->
                             <div class="prayer-box" id="prayer-${data.id}">
-                                <!-- Lines injected here -->
                                 <div class="amen-btn-container" style="width:100%; margin-top:20px; display:flex; justify-content:center;">
                                     <button class="action-btn" onclick="triggerEcho(this)">Amen</button>
                                 </div>
@@ -654,7 +799,283 @@
                     </div>
                 `;
                 container.appendChild(slide);
+                
+                // Show deep button after a moment
+                setTimeout(() => {
+                   const deepBtn = document.getElementById(`btn-deep-${data.id}`);
+                   if(deepBtn) deepBtn.style.display = 'inline-block';
+                }, 500);
             });
+        }
+
+        // --- NEW: LECTIO MODE (WALKING THE TEXT) ---
+        function startLectioMode(id) {
+            const data = DEVOTIONALS.find(d => d.id === id);
+            const container = document.getElementById(`scripture-box-${id}`);
+            const textEl = container.querySelector('.scripture-text');
+            
+            // Clear text
+            textEl.innerHTML = "";
+            textEl.classList.remove('held'); // temporarily remove styling
+            
+            const words = data.scripture.split(" ");
+            let i = 0;
+            
+            function typeWord() {
+                if(i < words.length) {
+                    const span = document.createElement("span");
+                    span.textContent = words[i] + " ";
+                    span.style.opacity = "0";
+                    span.style.transition = "opacity 0.5s ease";
+                    textEl.appendChild(span);
+                    
+                    // Trigger fade in
+                    requestAnimationFrame(() => span.style.opacity = "1");
+                    
+                    i++;
+                    setTimeout(typeWord, 600); // Slow pace: 600ms per word
+                } else {
+                    // Restore hold status if applicable
+                    const isHeld = state.heldWords.find(w => w.id === id);
+                    if(isHeld) textEl.classList.add('held');
+                }
+            }
+            typeWord();
+        }
+
+        // ============================
+        //  GEMINI API FUNCTIONS
+        // ============================
+
+        async function callGemini(promptText) {
+            if(!apiKey) {
+                alert("Please add your Gemini API Key in the Sidebar settings.");
+                throw new Error("No API Key");
+            }
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: promptText }] }]
+            };
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            } catch (error) {
+                console.error("Gemini Error:", error);
+                throw error;
+            }
+        }
+
+        // --- 1. PERSONAL DEVOTIONAL GENERATOR ---
+        function openGenerator() {
+            toggleSidebar();
+            const overlay = document.getElementById('generator-overlay');
+            overlay.classList.add('active');
+            document.getElementById('generator-input').focus();
+        }
+
+        function closeGenerator() {
+            document.getElementById('generator-overlay').classList.remove('active');
+            document.getElementById('gen-feedback').style.opacity = '0';
+        }
+
+        async function generateDevotional() {
+            const input = document.getElementById('generator-input');
+            const topic = input.value.trim();
+            if (!topic) return;
+
+            const btnText = document.getElementById('gen-btn-text');
+            const feedback = document.getElementById('gen-feedback');
+            
+            // Loading State
+            btnText.innerHTML = '<span class="spinner"></span> Creating...';
+            feedback.textContent = "Seeking a word for you...";
+            feedback.style.opacity = '1';
+
+            const prompt = `
+                You are a gentle, wise Christian spiritual director. 
+                Create a short, peaceful devotional about "${topic}".
+                Format as JSON with these exact keys: "title", "scripture" (text only), "ref" (e.g. Psalm 23:1), "reflection" (2-3 sentences max), "prompt" (journal question), "prayerLines" (array of 4 short strings).
+                Tone: Calming, orthodox, grace-filled.
+            `;
+
+            try {
+                const resultText = await callGemini(prompt);
+                // Clean markdown code blocks if present
+                const cleanJson = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
+                const data = JSON.parse(cleanJson);
+                
+                // Add new devotional to data
+                const newId = Date.now();
+                const newDevo = {
+                    id: newId,
+                    tags: ['Generated'],
+                    colors: ['#4C1D95', '#5B21B6', '#7C3AED'], // Violet theme for AI
+                    date: "Personal Word",
+                    ...data
+                };
+                
+                DEVOTIONALS.unshift(newDevo); // Add to top
+                closeGenerator();
+                renderFeed(); // Re-render
+                
+                // Scroll to top
+                document.getElementById('feed').scrollTo({ top: 0, behavior: 'smooth' });
+                
+                // Haptic Success
+                if(navigator.vibrate) navigator.vibrate([50, 100, 50]);
+
+            } catch (error) {
+                feedback.textContent = "Unable to connect. Check Key?";
+                feedback.style.color = "#ef4444";
+            } finally {
+                btnText.textContent = "Generate ✨";
+                input.value = "";
+            }
+        }
+
+        // --- 2. DEEPEN CONTEXT (THE LENS) ---
+        async function deepenContext(id, btn) {
+            const data = DEVOTIONALS.find(d => d.id === id);
+            const contentDiv = document.getElementById(`deepen-content-${id}`);
+            const reflectionBox = document.getElementById(`ref-${id}`);
+            
+            // Show reflection box if hidden so we can see the deepen content
+            if(reflectionBox.style.display === 'none') {
+                 document.getElementById(`btn-ref-${id}`).style.display = 'none';
+                 reflectionBox.style.display = 'block';
+            }
+
+            btn.innerHTML = '<span class="spinner"></span>';
+            contentDiv.style.display = 'block';
+            contentDiv.innerHTML = '<span style="color:#A78BFA; font-style:italic;">Consulting the text...</span>';
+
+            const prompt = `
+                Provide a very brief (2 sentences max) historical context or Greek/Hebrew keyword insight for this verse: "${data.scripture}" (${data.ref}). 
+                Focus on the meaning of a specific word to deepen spiritual understanding.
+                Start with "🔍 Context:" or "🔍 Word Study:".
+            `;
+
+            try {
+                const text = await callGemini(prompt);
+                contentDiv.innerHTML = `<p style="color:#E9D5FF; font-size:0.95rem;">${text}</p>`;
+                btn.style.display = 'none'; // Hide button after success
+            } catch (e) {
+                contentDiv.innerHTML = '<p style="color:red; font-size:0.8rem;">Could not deepen at this moment.</p>';
+                btn.innerHTML = 'Deepen 🔍';
+            }
+        }
+
+        // ============================
+        //  EXISTING FEATURES
+        // ============================
+
+        // --- SHARE IMAGE GENERATOR ---
+        function generateShareImage(id) {
+            const data = DEVOTIONALS.find(d => d.id === id);
+            const canvas = document.getElementById('share-canvas');
+            const ctx = canvas.getContext('2d');
+            const overlay = document.getElementById('share-overlay');
+            
+            const width = 1080;
+            const height = 1350; 
+            canvas.width = width;
+            canvas.height = height;
+
+            const grd = ctx.createLinearGradient(0, 0, width, height);
+            grd.addColorStop(0, data.colors[0]);
+            grd.addColorStop(0.5, data.colors[1]);
+            grd.addColorStop(1, data.colors[2]);
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.strokeStyle = "rgba(255,255,255,0.1)";
+            ctx.lineWidth = 4;
+            ctx.strokeRect(40, 40, width-80, height-80);
+
+            ctx.fillStyle = '#F7FAFC';
+            ctx.textAlign = 'center';
+            
+            ctx.font = '60px Cinzel';
+            ctx.fillText(data.title.toUpperCase(), width/2, 200);
+
+            ctx.font = 'italic 50px Cinzel';
+            const scriptureY = wrapText(ctx, '"' + data.scripture + '"', width/2, 400, 800, 80);
+            
+            ctx.fillStyle = '#D4AF37';
+            ctx.font = '36px Lato';
+            ctx.fillText(data.ref, width/2, scriptureY + 60);
+
+            ctx.fillStyle = '#A0AEC0';
+            ctx.font = '30px Lato';
+            ctx.fillText("DAILY GRACE SANCTUARY", width/2, height - 100);
+
+            overlay.classList.add('active');
+            
+            const link = document.getElementById('download-link');
+            link.href = canvas.toDataURL("image/png");
+            link.download = `daily-grace-${data.date}.png`;
+        }
+
+        function wrapText(context, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            for(let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = context.measureText(testLine);
+                if (metrics.width > maxWidth && n > 0) {
+                    context.fillText(line, x, y);
+                    line = words[n] + ' ';
+                    y += lineHeight;
+                } else { line = testLine; }
+            }
+            context.fillText(line, x, y);
+            return y + lineHeight; 
+        }
+
+        function closeShare() { document.getElementById('share-overlay').classList.remove('active'); }
+
+        // --- CAST CARES RITUAL ---
+        function openCaresRitual() {
+            toggleSidebar();
+            const overlay = document.getElementById('cares-overlay');
+            overlay.classList.add('active');
+            document.getElementById('care-input').focus();
+        }
+
+        function closeCaresRitual() {
+            document.getElementById('cares-overlay').classList.remove('active');
+            document.getElementById('care-input').value = "";
+            document.getElementById('cares-feedback').style.opacity = '0';
+        }
+
+        function releaseCare() {
+            const input = document.getElementById('care-input');
+            const val = input.value;
+            if(!val.trim()) return;
+
+            const floater = document.createElement('div');
+            floater.textContent = val;
+            floater.className = 'smoke-text';
+            const rect = input.getBoundingClientRect();
+            floater.style.left = rect.left + 'px';
+            floater.style.top = rect.top + 'px';
+            floater.style.width = rect.width + 'px';
+            floater.style.textAlign = 'center';
+            document.getElementById('cares-overlay').appendChild(floater);
+            input.value = "";
+            setTimeout(() => {
+                document.getElementById('cares-feedback').style.opacity = '1';
+                if(navigator.vibrate) navigator.vibrate(50);
+            }, 800);
+            setTimeout(() => floater.remove(), 3000);
         }
 
         // --- INTERACTION LOGIC ---
@@ -672,8 +1093,6 @@
             const text = document.getElementById(`note-${id}`).value;
             state.savedNotes[id] = text;
             localStorage.setItem('dailyGrace_notes', JSON.stringify(state.savedNotes));
-            
-            // Visual feedback
             const btn = document.querySelector(`#journal-${id} .secondary`);
             const originalText = btn.textContent;
             btn.textContent = "Saved";
@@ -681,11 +1100,8 @@
         }
 
         function revealPrayer(btn, id, fromJournal = false) {
-            if(fromJournal) {
-                document.getElementById(`journal-${id}`).style.display = 'none'; // Close journal to focus on prayer
-            } else {
-                btn.style.display = 'none';
-            }
+            if(fromJournal) { document.getElementById(`journal-${id}`).style.display = 'none'; } 
+            else { btn.style.display = 'none'; }
             
             const box = document.getElementById(`prayer-${id}`);
             const data = DEVOTIONALS.find(d => d.id === id);
@@ -703,25 +1119,19 @@
         }
 
         function triggerEcho(btn) {
-            // Ripple Animation
             const ripple = document.createElement('div');
             ripple.className = 'ripple';
             btn.parentElement.appendChild(ripple);
-            
-            // Haptic
             if(navigator.vibrate) navigator.vibrate([50, 50, 50]);
-            
             setTimeout(() => ripple.remove(), 1000);
         }
 
-        // --- DYNAMIC ATMOSPHERE OBSERVER ---
+        // --- DYNAMIC ATMOSPHERE ---
         function setupObserver() {
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('active');
-                        
-                        // Update CSS Variables for Background Gradient
                         const colors = JSON.parse(entry.target.dataset.colors);
                         document.documentElement.style.setProperty('--atm-1', colors[0]);
                         document.documentElement.style.setProperty('--atm-2', colors[1]);
@@ -729,7 +1139,6 @@
                     }
                 });
             }, { threshold: 0.5 });
-            
             document.querySelectorAll('.slide').forEach(slide => observer.observe(slide));
         }
 
@@ -741,7 +1150,6 @@
             let timeLeft = 60;
             display.textContent = "01:00";
             if(state.silenceInterval) clearInterval(state.silenceInterval);
-            
             state.silenceInterval = setInterval(() => {
                 timeLeft--;
                 const m = Math.floor(timeLeft / 60);
@@ -777,7 +1185,6 @@
                 state.heldWords.splice(index, 1);
                 textEl.classList.remove('held');
             }
-
             localStorage.setItem('dailyGrace_held', JSON.stringify(state.heldWords));
             renderHeldWords();
         }
